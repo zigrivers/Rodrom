@@ -4,6 +4,10 @@ function appendLog(state, line) {
   return { ...state, log: [...state.log, line] };
 }
 
+function hasPostureSetup(structures) {
+  return structures.includes('snare-line') || structures.includes('bait-stake');
+}
+
 export function applyHeroProbe(state, attunement) {
   const target = state.currentEncounter.target;
   const matched = attunement === target.primaryAttunement;
@@ -22,7 +26,7 @@ export function applyHeroProbe(state, attunement) {
       },
       flags: {
         ...state.currentEncounter.flags,
-        attunementMatch: matched,
+        attunementMatch: state.currentEncounter.flags.attunementMatch || matched,
       },
     },
   };
@@ -50,7 +54,8 @@ export function applyToolAction(state, toolId) {
       structures: [...state.currentEncounter.structures, toolId],
       flags: {
         ...state.currentEncounter.flags,
-        postureReady: toolId === 'snare-line' || toolId === 'bait-stake',
+        postureReady:
+          state.currentEncounter.flags.postureReady || hasPostureSetup([...state.currentEncounter.structures, toolId]),
       },
     },
   };

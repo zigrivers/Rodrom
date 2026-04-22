@@ -28,7 +28,31 @@ test('Capture attempt fails cleanly before a beast is bindable', () => {
   assert.match(state.log.at(-1), /not ready to bind/i);
 });
 
-test('Advance encounter carries wounds, spent tools, and clue discoveries forward', () => {
+test('Encounter setup persists after a wrong probe and later tool placement', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyHeroProbe(state, 'ash');
+  state = applyHeroProbe(state, 'stone');
+  state = applyToolAction(state, 'snare-line');
+  state = applyToolAction(state, 'torch-pylon');
+
+  assert.equal(state.currentEncounter.flags.attunementMatch, true);
+  assert.equal(state.currentEncounter.flags.postureReady, true);
+});
+
+test('Encounter setup persists when a later probe and tool do not clear prior readiness', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = applyHeroProbe(state, 'stone');
+  state = applyToolAction(state, 'torch-pylon');
+
+  assert.equal(state.currentEncounter.target.captureState, 'bindable');
+  assert.equal(state.currentEncounter.flags.attunementMatch, true);
+  assert.equal(state.currentEncounter.flags.postureReady, true);
+});
+
+test('Advance encounter resets the current target and preserves codex hints', () => {
   let state = createInitialState({ encounterIds: ['ashwing-moth', 'veil-lynx'] });
   state = applyHeroProbe(state, 'ash');
   state = applyToolAction(state, 'snare-line');
