@@ -97,13 +97,19 @@ export function applyCompanionAction(state, beastId, actionId) {
 
 export function applyStrikeAction(state) {
   const target = state.currentEncounter.target;
+  const nextHealth = Math.max(0, target.health - 1);
   const nextState = {
     ...state,
     currentEncounter: {
       ...state.currentEncounter,
+      flags: {
+        ...state.currentEncounter.flags,
+        guardRaised: false,
+      },
       target: {
         ...target,
-        health: Math.max(0, target.health - 1),
+        health: nextHealth,
+        captureState: nextHealth === 0 ? 'defeated' : target.captureState,
       },
     },
   };
@@ -112,7 +118,19 @@ export function applyStrikeAction(state) {
 }
 
 export function applyGuardAction(state) {
-  return appendLog(state, 'The expedition takes a guarded stance.');
+  return appendLog(
+    {
+      ...state,
+      currentEncounter: {
+        ...state.currentEncounter,
+        flags: {
+          ...state.currentEncounter.flags,
+          guardRaised: true,
+        },
+      },
+    },
+    'The expedition takes a guarded stance.'
+  );
 }
 
 export function attemptCapture(state) {
@@ -139,10 +157,6 @@ export function attemptCapture(state) {
   return appendLog(nextState, `${target.name} is captured.`);
 }
 
-export function canCapture(state) {
-  return state.currentEncounter.target.captureState === 'bindable';
-}
-
 export function advanceEncounter(state) {
   const nextIndex = state.encounterIndex + 1;
   if (nextIndex >= state.encounterIds.length) {
@@ -159,6 +173,7 @@ export function advanceEncounter(state) {
       flags: {
         attunementMatch: false,
         postureReady: false,
+        guardRaised: false,
       },
     },
   };

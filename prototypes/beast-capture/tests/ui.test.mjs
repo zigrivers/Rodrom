@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createInitialState } from '../src/state.mjs';
+import {
+  applyGuardAction,
+  applyHeroProbe,
+  applyStrikeAction,
+  applyToolAction,
+  applyCompanionAction,
+} from '../src/engine.mjs';
 import { renderApp } from '../src/ui.mjs';
 
 test('renderApp shows the current target and action controls', () => {
@@ -16,4 +23,27 @@ test('renderApp shows the current target and action controls', () => {
 test('renderApp disables capture until the target is bindable', () => {
   const html = renderApp(createInitialState({ encounterIds: ['ashwing-moth'] }));
   assert.match(html, /data-action="capture"[^>]*disabled/);
+});
+
+test('renderApp reflects strike damage in the target panel', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyStrikeAction(state);
+
+  const html = renderApp(state);
+
+  assert.match(html, /Target HP: 1\/2/);
+  assert.match(html, /data-action="capture"[^>]*disabled/);
+});
+
+test('renderApp reflects a guarded stance and capture enablement stays state-driven', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyGuardAction(state);
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+
+  const html = renderApp(state);
+
+  assert.match(html, /Guard: Raised/);
+  assert.match(html, /data-action="capture"(?![^>]*disabled)/);
 });

@@ -1,8 +1,6 @@
-import { canCapture } from './engine.mjs';
-
 export function renderApp(state) {
   const target = state.currentEncounter.target;
-  const captureDisabled = !canCapture(state);
+  const captureDisabled = target.captureState !== 'bindable';
 
   return `
     <div class="layout">
@@ -11,6 +9,7 @@ export function renderApp(state) {
         <h2>${target.name}</h2>
         <p>Target HP: ${target.health}/${target.maxHealth}</p>
         <p>Posture: ${target.posture}</p>
+        <p>Guard: ${state.currentEncounter.flags.guardRaised ? 'Raised' : 'Low'}</p>
         <p>Capture state: ${describeCaptureState(target.captureState)}</p>
         <div class="actions">
           <button data-action="strike">Strike</button>
@@ -43,6 +42,7 @@ function describeCaptureState(value) {
     unreadable: 'Unreadable',
     probed: 'Disturbed',
     bindable: 'Bindable',
+    defeated: 'Defeated',
     captured: 'Captured',
   };
 

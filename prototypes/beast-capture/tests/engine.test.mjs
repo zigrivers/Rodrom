@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { createInitialState } from '../src/state.mjs';
 import {
   applyHeroProbe,
+  applyGuardAction,
+  applyStrikeAction,
   applyToolAction,
   applyCompanionAction,
   attemptCapture,
@@ -64,4 +66,22 @@ test('Advance encounter resets the current target and preserves codex hints', ()
   assert.equal(state.party.tools['snare-line'], 0);
   assert.ok(state.codexHints['ashwing-moth'].includes('ash'));
   assert.equal(state.currentEncounter.target.id, 'veil-lynx');
+});
+
+test('Strike defeats a target at zero HP and makes it non-capturable', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyStrikeAction(state);
+  state = applyStrikeAction(state);
+
+  assert.equal(state.currentEncounter.target.health, 0);
+  assert.equal(state.currentEncounter.target.captureState, 'defeated');
+  state = attemptCapture(state);
+  assert.match(state.log.at(-1), /not ready to bind/i);
+});
+
+test('Guard raises a persistent defensive stance on the encounter', () => {
+  const state = applyGuardAction(createInitialState({ encounterIds: ['ashwing-moth'] }));
+
+  assert.equal(state.currentEncounter.flags.guardRaised, true);
+  assert.match(state.log.at(-1), /guarded stance/i);
 });

@@ -43,6 +43,7 @@ export function createInitialState(options = {}) {
       flags: {
         attunementMatch: false,
         postureReady: false,
+        guardRaised: false,
       },
     },
   };
