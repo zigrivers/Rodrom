@@ -23,6 +23,7 @@ export function renderApp(state) {
         <p>Target HP: ${target.health}/${target.maxHealth}</p>
         <p>Posture: ${target.posture}</p>
         <p>Guard: ${state.currentEncounter.flags.guardRaised ? 'Raised' : 'Low'}</p>
+        <p>Risk: ${state.currentEncounter.flags.alerted ? 'High' : 'Low'}</p>
         <p>Capture state: ${describeCaptureState(target.captureState)}</p>
         <div class="actions">
           <button data-action="strike">Strike</button>

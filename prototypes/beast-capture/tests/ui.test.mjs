@@ -50,6 +50,17 @@ test('renderApp reflects a guarded stance and capture enablement stays state-dri
   assert.match(html, /data-action="capture"(?![^>]*disabled)/);
 });
 
+test('renderApp shows elevated encounter risk after failed reads and fatigue carryover', () => {
+  let state = createInitialState({ encounterIds: ['chain-maw', 'veil-lynx'] });
+  state = applyHeroProbe(state, 'stone');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = advanceEncounter(state);
+
+  const html = renderApp(state);
+
+  assert.match(html, /Risk: High/);
+});
+
 test('renderApp shows the expedition result screen after the final capture', () => {
   let state = createInitialState({ encounterIds: ['ashwing-moth'] });
   state = applyHeroProbe(state, 'ash');

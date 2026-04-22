@@ -24,6 +24,7 @@ export function applyHeroProbe(state, attunement) {
     },
     currentEncounter: {
       ...state.currentEncounter,
+      pressure: matched ? state.currentEncounter.pressure : state.currentEncounter.pressure + 1,
       target: {
         ...target,
         captureState: matched && !isTerminalCaptureState(target.captureState) ? 'probed' : target.captureState,
@@ -164,6 +165,9 @@ export function attemptCapture(state) {
 export function advanceEncounter(state) {
   const nextIndex = state.encounterIndex + 1;
   const captures = state.party.captures.length;
+  const carryoverPressure =
+    state.currentEncounter.pressure +
+    Object.values(state.party.beasts).reduce((total, beast) => total + beast.fatigue, 0);
   if (nextIndex >= state.encounterIds.length) {
     const finalCaptured = state.currentEncounter.target.captureState === 'captured';
     return appendLog(
@@ -185,11 +189,14 @@ export function advanceEncounter(state) {
     currentEncounter: {
       target: createTargetState(state.encounterIds[nextIndex]),
       turn: 1,
+      pressure: 0,
+      riskLevel: carryoverPressure,
       structures: [],
       flags: {
         attunementMatch: false,
         postureReady: false,
         guardRaised: false,
+        alerted: carryoverPressure > 0,
       },
     },
   };

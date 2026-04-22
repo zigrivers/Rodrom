@@ -112,13 +112,15 @@ test('Captured targets stay captured after later probe and companion actions', (
   assert.deepEqual(state.party.captures, ['ashwing-moth']);
 });
 
-test('failed probes and actions create fatigue and make later encounters riskier', () => {
+test('failed probes and actions create pressure that makes the next encounter riskier', () => {
   let state = createInitialState({ encounterIds: ['chain-maw', 'veil-lynx'] });
   state = applyHeroProbe(state, 'stone');
   state = applyCompanionAction(state, 'grave-hound', 'harry');
   state = advanceEncounter(state);
 
   assert.equal(state.party.beasts['grave-hound'].fatigue, 1);
+  assert.equal(state.currentEncounter.flags.alerted, true);
+  assert.equal(state.currentEncounter.riskLevel, 2);
   assert.match(state.log.at(-1), /advance to encounter 2/i);
 });
 

@@ -41,11 +41,14 @@ export function createInitialState(options = {}) {
     currentEncounter: {
       target: createTargetState(encounterIds[0]),
       turn: 1,
+      pressure: 0,
+      riskLevel: 0,
       structures: [],
       flags: {
         attunementMatch: false,
         postureReady: false,
         guardRaised: false,
+        alerted: false,
       },
     },
   };
