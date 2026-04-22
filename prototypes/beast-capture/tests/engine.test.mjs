@@ -85,3 +85,29 @@ test('Guard raises a persistent defensive stance on the encounter', () => {
   assert.equal(state.currentEncounter.flags.guardRaised, true);
   assert.match(state.log.at(-1), /guarded stance/i);
 });
+
+test('Terminal target states are not rewritten by later probe or companion actions', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyStrikeAction(state);
+  state = applyStrikeAction(state);
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+
+  assert.equal(state.currentEncounter.target.health, 0);
+  assert.equal(state.currentEncounter.target.captureState, 'defeated');
+});
+
+test('Captured targets stay captured after later probe and companion actions', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = attemptCapture(state);
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'torch-pylon');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+
+  assert.equal(state.currentEncounter.target.captureState, 'captured');
+  assert.deepEqual(state.party.captures, ['ashwing-moth']);
+});

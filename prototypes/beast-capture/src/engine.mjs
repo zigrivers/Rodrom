@@ -8,6 +8,10 @@ function hasPostureSetup(structures) {
   return structures.includes('snare-line') || structures.includes('bait-stake');
 }
 
+function isTerminalCaptureState(value) {
+  return value === 'defeated' || value === 'captured';
+}
+
 export function applyHeroProbe(state, attunement) {
   const target = state.currentEncounter.target;
   const matched = attunement === target.primaryAttunement;
@@ -22,7 +26,7 @@ export function applyHeroProbe(state, attunement) {
       ...state.currentEncounter,
       target: {
         ...target,
-        captureState: matched ? 'probed' : target.captureState,
+        captureState: matched && !isTerminalCaptureState(target.captureState) ? 'probed' : target.captureState,
       },
       flags: {
         ...state.currentEncounter.flags,
@@ -87,7 +91,7 @@ export function applyCompanionAction(state, beastId, actionId) {
       ...state.currentEncounter,
       target: {
         ...target,
-        captureState: bindable ? 'bindable' : target.captureState,
+        captureState: bindable && !isTerminalCaptureState(target.captureState) ? 'bindable' : target.captureState,
       },
     },
   };
