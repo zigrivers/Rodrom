@@ -34,8 +34,6 @@ export function renderApp(state) {
           <p>Capture state: ${describeCaptureState(target.captureState)}</p>
           <p>Pressure: ${state.currentEncounter.pressure}</p>
           <p>Carryover Risk: ${state.currentEncounter.riskLevel}</p>
-          <p>Guard: ${state.currentEncounter.flags.guardRaised ? 'Raised' : 'Low'}</p>
-          <p>Brace: ${state.currentEncounter.flags.braceRaised ? 'Raised' : 'Low'}</p>
           <p>Advance: ${advanceAllowed ? 'Ready' : 'Locked'}</p>
         </div>
         <div class="actions">

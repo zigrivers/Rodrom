@@ -57,6 +57,15 @@ test('renderApp shows turn, tool counts, structures, learned clues, and advance 
   assert.match(html, /Iron/);
 });
 
+test('renderApp does not present one-step defense effects as persistent status fields', () => {
+  const html = renderApp(createInitialState({ encounterIds: ['storm-antler'] }));
+
+  assert.doesNotMatch(html, /Guard:/);
+  assert.doesNotMatch(html, /Brace:/);
+  assert.match(html, /Guard/);
+  assert.match(html, /Mireback: Brace/);
+});
+
 test('renderApp shows a learned clue summary on the expedition result screen', () => {
   let state = createInitialState({ encounterIds: ['ashwing-moth'] });
   state = applyHeroProbe(state, 'ash');
