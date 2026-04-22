@@ -22,6 +22,8 @@ export function createInitialState(options = {}) {
     encounterIndex: 0,
     log: ['Expedition begins.'],
     codexHints: {},
+    expeditionComplete: false,
+    result: null,
     party: {
       leader: { health: 6, maxHealth: 6 },
       beasts: {

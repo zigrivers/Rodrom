@@ -8,6 +8,8 @@ import {
   applyStrikeAction,
   applyToolAction,
   applyCompanionAction,
+  attemptCapture,
+  advanceEncounter,
 } from '../src/engine.mjs';
 import { renderApp } from '../src/ui.mjs';
 
@@ -46,4 +48,19 @@ test('renderApp reflects a guarded stance and capture enablement stays state-dri
 
   assert.match(html, /Guard: Raised/);
   assert.match(html, /data-action="capture"(?![^>]*disabled)/);
+});
+
+test('renderApp shows the expedition result screen after the final capture', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = attemptCapture(state);
+  state = advanceEncounter(state);
+
+  const html = renderApp(state);
+
+  assert.match(html, /Expedition Complete/);
+  assert.match(html, /Result: strong-success/);
+  assert.match(html, /Run Again/);
 });

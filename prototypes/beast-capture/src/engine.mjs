@@ -163,8 +163,20 @@ export function attemptCapture(state) {
 
 export function advanceEncounter(state) {
   const nextIndex = state.encounterIndex + 1;
+  const captures = state.party.captures.length;
   if (nextIndex >= state.encounterIds.length) {
-    return appendLog({ ...state, expeditionComplete: true }, 'Expedition complete.');
+    const finalCaptured = state.currentEncounter.target.captureState === 'captured';
+    return appendLog(
+      {
+        ...state,
+        expeditionComplete: true,
+        result: {
+          rank: finalCaptured ? 'strong-success' : captures >= 1 ? 'success' : 'partial-failure',
+          captures,
+        },
+      },
+      'Expedition complete.'
+    );
   }
 
   const nextState = {

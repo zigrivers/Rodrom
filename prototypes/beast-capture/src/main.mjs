@@ -52,6 +52,9 @@ document.addEventListener('click', (event) => {
     case 'advance':
       state = advanceEncounter(state);
       break;
+    case 'replay':
+      state = createInitialState();
+      break;
     default:
       break;
   }

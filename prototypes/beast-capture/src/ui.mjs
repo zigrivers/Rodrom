@@ -1,4 +1,17 @@
 export function renderApp(state) {
+  if (state.expeditionComplete) {
+    return `
+      <section class="panel">
+        <h1>Expedition Complete</h1>
+        <p>Result: ${state.result.rank}</p>
+        <p>Captures: ${state.result.captures}</p>
+        <button data-action="replay">Run Again</button>
+        <h3>Log</h3>
+        <div class="log">${state.log.map((line) => `<div>${line}</div>`).join('')}</div>
+      </section>
+    `;
+  }
+
   const target = state.currentEncounter.target;
   const captureDisabled = target.captureState !== 'bindable';
 
