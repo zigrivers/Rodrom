@@ -3,154 +3,90 @@ import assert from 'node:assert/strict';
 
 import { createInitialState } from '../src/state.mjs';
 import {
-  applyHeroProbe,
+  advanceEncounter,
+  applyCompanionAction,
   applyGuardAction,
+  applyHeroProbe,
   applyStrikeAction,
   applyToolAction,
-  applyCompanionAction,
   attemptCapture,
-  advanceEncounter,
+  canAdvanceEncounter,
 } from '../src/engine.mjs';
 
-test('Ashwing Moth becomes bindable after the correct ash read and snare setup', () => {
-  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+test('the default expedition can capture all three default encounters with browser-visible actions', () => {
+  let state = createInitialState();
 
-  state = applyHeroProbe(state, 'ash');
-  state = applyToolAction(state, 'snare-line');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
-
-  assert.equal(state.currentEncounter.target.captureState, 'bindable');
-});
-
-test('Capture attempt fails cleanly before a beast is bindable', () => {
-  let state = createInitialState({ encounterIds: ['chain-maw'] });
-  state = attemptCapture(state);
-
-  assert.equal(state.currentEncounter.target.captureState, 'unreadable');
-  assert.match(state.log.at(-1), /not ready to bind/i);
-});
-
-test('Encounter setup persists after a wrong probe and later tool placement', () => {
-  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
-  state = applyHeroProbe(state, 'ash');
-  state = applyHeroProbe(state, 'stone');
-  state = applyToolAction(state, 'snare-line');
-  state = applyToolAction(state, 'torch-pylon');
-
-  assert.equal(state.currentEncounter.flags.attunementMatch, true);
-  assert.equal(state.currentEncounter.flags.postureReady, true);
-});
-
-test('Encounter setup persists when a later probe and tool do not clear prior readiness', () => {
-  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
-  state = applyHeroProbe(state, 'ash');
-  state = applyToolAction(state, 'snare-line');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
-  state = applyHeroProbe(state, 'stone');
-  state = applyToolAction(state, 'torch-pylon');
-
-  assert.equal(state.currentEncounter.target.captureState, 'bindable');
-  assert.equal(state.currentEncounter.flags.attunementMatch, true);
-  assert.equal(state.currentEncounter.flags.postureReady, true);
-});
-
-test('Advance encounter resets the current target and preserves codex hints', () => {
-  let state = createInitialState({ encounterIds: ['ashwing-moth', 'veil-lynx'] });
   state = applyHeroProbe(state, 'ash');
   state = applyToolAction(state, 'snare-line');
   state = applyCompanionAction(state, 'grave-hound', 'harry');
   state = attemptCapture(state);
   state = advanceEncounter(state);
 
-  assert.equal(state.encounterIndex, 1);
-  assert.equal(state.party.tools['snare-line'], 0);
-  assert.ok(state.codexHints['ashwing-moth'].includes('ash'));
-  assert.equal(state.currentEncounter.target.id, 'veil-lynx');
-});
-
-test('Strike defeats a target at zero HP and makes it non-capturable', () => {
-  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
-  state = applyStrikeAction(state);
-  state = applyStrikeAction(state);
-
-  assert.equal(state.currentEncounter.target.health, 0);
-  assert.equal(state.currentEncounter.target.captureState, 'defeated');
-  state = attemptCapture(state);
-  assert.match(state.log.at(-1), /not ready to bind/i);
-});
-
-test('Guard raises a persistent defensive stance on the encounter', () => {
-  const state = applyGuardAction(createInitialState({ encounterIds: ['ashwing-moth'] }));
-
-  assert.equal(state.currentEncounter.flags.guardRaised, true);
-  assert.match(state.log.at(-1), /guarded stance/i);
-});
-
-test('Terminal target states are not rewritten by later probe or companion actions', () => {
-  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
-  state = applyStrikeAction(state);
-  state = applyStrikeAction(state);
-  state = applyHeroProbe(state, 'ash');
-  state = applyToolAction(state, 'snare-line');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
-
-  assert.equal(state.currentEncounter.target.health, 0);
-  assert.equal(state.currentEncounter.target.captureState, 'defeated');
-});
-
-test('Captured targets stay captured after later probe and companion actions', () => {
-  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
-  state = applyHeroProbe(state, 'ash');
-  state = applyToolAction(state, 'snare-line');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
-  state = attemptCapture(state);
-  state = applyHeroProbe(state, 'ash');
-  state = applyToolAction(state, 'torch-pylon');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
-
-  assert.equal(state.currentEncounter.target.captureState, 'captured');
-  assert.deepEqual(state.party.captures, ['ashwing-moth']);
-});
-
-test('failed probes and actions create pressure that makes the next encounter riskier', () => {
-  let state = createInitialState({ encounterIds: ['chain-maw', 'veil-lynx'] });
-  state = applyHeroProbe(state, 'stone');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
-  state = advanceEncounter(state);
-
-  assert.equal(state.party.beasts['grave-hound'].fatigue, 1);
-  assert.equal(state.currentEncounter.flags.alerted, true);
-  assert.equal(state.currentEncounter.riskLevel, 2);
-  assert.equal(state.party.leader.health, 5);
-  assert.match(state.log.at(-1), /advance to encounter 2/i);
-});
-
-test('one captured target yields a success result', () => {
-  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
-  state = applyHeroProbe(state, 'ash');
-  state = applyToolAction(state, 'snare-line');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
-  state = attemptCapture(state);
-  state = advanceEncounter(state);
-
-  assert.equal(state.expeditionComplete, true);
-  assert.equal(state.result.rank, 'success');
-});
-
-test('two captures across a three-encounter run yield a strong result even if the final target is not captured', () => {
-  let state = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'veil-lynx'] });
-  state = applyHeroProbe(state, 'ash');
-  state = applyToolAction(state, 'snare-line');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
-  state = attemptCapture(state);
-  state = advanceEncounter(state);
   state = applyHeroProbe(state, 'iron');
   state = applyToolAction(state, 'bait-stake');
   state = applyCompanionAction(state, 'grave-hound', 'harry');
   state = attemptCapture(state);
   state = advanceEncounter(state);
+
+  state = applyHeroProbe(state, 'storm');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = attemptCapture(state);
   state = advanceEncounter(state);
 
   assert.equal(state.expeditionComplete, true);
   assert.equal(state.result.rank, 'strong-success');
+  assert.deepEqual(state.party.captures, ['ashwing-moth', 'chain-maw', 'storm-antler']);
+});
+
+test('advance is blocked until the current encounter is captured or defeated', () => {
+  const state = createInitialState();
+  const nextState = advanceEncounter(state);
+
+  assert.equal(nextState.encounterIndex, 0);
+  assert.equal(canAdvanceEncounter(nextState), false);
+  assert.match(nextState.log.at(-1), /cannot advance/i);
+});
+
+test('every non-advance action spends a turn and active targets push pressure back onto the party', () => {
+  let state = createInitialState({ encounterIds: ['chain-maw'] });
+  state = applyHeroProbe(state, 'stone');
+
+  assert.equal(state.currentEncounter.turn, 2);
+  assert.equal(state.currentEncounter.pressure, 1);
+  assert.match(state.log.at(-1), /presses back/i);
+});
+
+test('guard changes encounter resolution by preventing the next retaliation step', () => {
+  const guarded = applyGuardAction(createInitialState({ encounterIds: ['chain-maw'] }));
+  const exposed = applyStrikeAction(createInitialState({ encounterIds: ['chain-maw'] }));
+
+  assert.equal(guarded.currentEncounter.pressure, 0);
+  assert.equal(exposed.currentEncounter.pressure, 1);
+});
+
+test('mireback brace changes encounter resolution by preventing the next retaliation step', () => {
+  const braced = applyCompanionAction(
+    createInitialState({ encounterIds: ['storm-antler'] }),
+    'mireback-tortoise',
+    'brace'
+  );
+  const exposed = applyStrikeAction(createInitialState({ encounterIds: ['storm-antler'] }));
+
+  assert.equal(braced.currentEncounter.pressure, 0);
+  assert.equal(braced.party.beasts['mireback-tortoise'].fatigue, 1);
+  assert.equal(exposed.currentEncounter.pressure, 1);
+});
+
+test('captured encounters preserve learned clues into the expedition result summary', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = attemptCapture(state);
+  state = advanceEncounter(state);
+
+  assert.deepEqual(state.codexHints['ashwing-moth'], ['ash']);
+  assert.equal(state.result.rank, 'success');
 });

@@ -53,6 +53,6 @@ export const TARGET_BEASTS = {
 export const TOOLS = {
   'torch-pylon': { id: 'torch-pylon', name: 'Torch Pylon', uses: 1 },
   'salt-marker': { id: 'salt-marker', name: 'Salt Marker', uses: 1 },
-  'snare-line': { id: 'snare-line', name: 'Snare Line', uses: 1 },
-  'bait-stake': { id: 'bait-stake', name: 'Bait Stake', uses: 1 },
+  'snare-line': { id: 'snare-line', name: 'Snare Line', uses: 2 },
+  'bait-stake': { id: 'bait-stake', name: 'Bait Stake', uses: 2 },
 };

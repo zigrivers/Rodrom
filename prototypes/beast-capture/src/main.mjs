@@ -31,19 +31,22 @@ document.addEventListener('click', (event) => {
     case 'probe-ash':
       state = applyHeroProbe(state, 'ash');
       break;
-    case 'probe-veil':
-      state = applyHeroProbe(state, 'veil');
+    case 'probe-iron':
+      state = applyHeroProbe(state, 'iron');
+      break;
+    case 'probe-storm':
+      state = applyHeroProbe(state, 'storm');
       break;
     case 'tool-snare-line':
       state = applyToolAction(state, 'snare-line');
       break;
-    case 'tool-salt-marker':
-      state = applyToolAction(state, 'salt-marker');
+    case 'tool-bait-stake':
+      state = applyToolAction(state, 'bait-stake');
       break;
     case 'hound-harry':
       state = applyCompanionAction(state, 'grave-hound', 'harry');
       break;
-    case 'tortoise-brace':
+    case 'mireback-brace':
       state = applyCompanionAction(state, 'mireback-tortoise', 'brace');
       break;
     case 'capture':
