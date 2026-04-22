@@ -119,6 +119,10 @@ export function attemptCapture(state) {
   return appendLog(nextState, `${target.name} is captured.`);
 }
 
+export function canCapture(state) {
+  return state.currentEncounter.target.captureState === 'bindable';
+}
+
 export function advanceEncounter(state) {
   const nextIndex = state.encounterIndex + 1;
   if (nextIndex >= state.encounterIds.length) {
