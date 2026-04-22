@@ -1,6 +1,8 @@
 import { createInitialState } from './state.mjs';
 import {
   applyHeroProbe,
+  applyGuardAction,
+  applyStrikeAction,
   applyToolAction,
   applyCompanionAction,
   attemptCapture,
@@ -20,6 +22,12 @@ document.addEventListener('click', (event) => {
   if (!button || button.disabled) return;
 
   switch (button.dataset.action) {
+    case 'strike':
+      state = applyStrikeAction(state);
+      break;
+    case 'guard':
+      state = applyGuardAction(state);
+      break;
     case 'probe-ash':
       state = applyHeroProbe(state, 'ash');
       break;

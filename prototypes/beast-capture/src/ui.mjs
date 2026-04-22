@@ -9,6 +9,7 @@ export function renderApp(state) {
       <section class="panel">
         <h1>Beast Capture Prototype</h1>
         <h2>${target.name}</h2>
+        <p>Target HP: ${target.health}/${target.maxHealth}</p>
         <p>Posture: ${target.posture}</p>
         <p>Capture state: ${describeCaptureState(target.captureState)}</p>
         <div class="actions">

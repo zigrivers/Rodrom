@@ -95,6 +95,26 @@ export function applyCompanionAction(state, beastId, actionId) {
   return appendLog(nextState, `${state.party.beasts[beastId].name} uses ${actionId}.`);
 }
 
+export function applyStrikeAction(state) {
+  const target = state.currentEncounter.target;
+  const nextState = {
+    ...state,
+    currentEncounter: {
+      ...state.currentEncounter,
+      target: {
+        ...target,
+        health: Math.max(0, target.health - 1),
+      },
+    },
+  };
+
+  return appendLog(nextState, `${target.name} takes a strike.`);
+}
+
+export function applyGuardAction(state) {
+  return appendLog(state, 'The expedition takes a guarded stance.');
+}
+
 export function attemptCapture(state) {
   const target = state.currentEncounter.target;
   if (target.captureState !== 'bindable') {
