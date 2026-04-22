@@ -169,13 +169,12 @@ export function advanceEncounter(state) {
     state.currentEncounter.pressure +
     Object.values(state.party.beasts).reduce((total, beast) => total + beast.fatigue, 0);
   if (nextIndex >= state.encounterIds.length) {
-    const finalCaptured = state.currentEncounter.target.captureState === 'captured';
     return appendLog(
       {
         ...state,
         expeditionComplete: true,
         result: {
-          rank: finalCaptured ? 'strong-success' : captures >= 1 ? 'success' : 'partial-failure',
+          rank: captures >= 2 ? 'strong-success' : captures >= 1 ? 'success' : 'partial-failure',
           captures,
         },
       },
@@ -197,6 +196,13 @@ export function advanceEncounter(state) {
         postureReady: false,
         guardRaised: false,
         alerted: carryoverPressure > 0,
+      },
+    },
+    party: {
+      ...state.party,
+      leader: {
+        ...state.party.leader,
+        health: carryoverPressure > 0 ? Math.max(0, state.party.leader.health - 1) : state.party.leader.health,
       },
     },
   };

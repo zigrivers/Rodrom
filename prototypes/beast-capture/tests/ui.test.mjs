@@ -59,6 +59,7 @@ test('renderApp shows elevated encounter risk after failed reads and fatigue car
   const html = renderApp(state);
 
   assert.match(html, /Risk: High/);
+  assert.match(html, /Leader HP: 5\/6/);
 });
 
 test('renderApp shows the expedition result screen after the final capture', () => {
@@ -72,6 +73,6 @@ test('renderApp shows the expedition result screen after the final capture', () 
   const html = renderApp(state);
 
   assert.match(html, /Expedition Complete/);
-  assert.match(html, /Result: strong-success/);
+  assert.match(html, /Result: success/);
   assert.match(html, /Run Again/);
 });

@@ -121,15 +121,34 @@ test('failed probes and actions create pressure that makes the next encounter ri
   assert.equal(state.party.beasts['grave-hound'].fatigue, 1);
   assert.equal(state.currentEncounter.flags.alerted, true);
   assert.equal(state.currentEncounter.riskLevel, 2);
+  assert.equal(state.party.leader.health, 5);
   assert.match(state.log.at(-1), /advance to encounter 2/i);
 });
 
-test('capturing the final target marks the expedition complete with a strong result', () => {
+test('one captured target yields a success result', () => {
   let state = createInitialState({ encounterIds: ['ashwing-moth'] });
   state = applyHeroProbe(state, 'ash');
   state = applyToolAction(state, 'snare-line');
   state = applyCompanionAction(state, 'grave-hound', 'harry');
   state = attemptCapture(state);
+  state = advanceEncounter(state);
+
+  assert.equal(state.expeditionComplete, true);
+  assert.equal(state.result.rank, 'success');
+});
+
+test('two captures across a three-encounter run yield a strong result even if the final target is not captured', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'veil-lynx'] });
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = attemptCapture(state);
+  state = advanceEncounter(state);
+  state = applyHeroProbe(state, 'iron');
+  state = applyToolAction(state, 'bait-stake');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = attemptCapture(state);
+  state = advanceEncounter(state);
   state = advanceEncounter(state);
 
   assert.equal(state.expeditionComplete, true);
