@@ -57,6 +57,24 @@ test('renderApp shows turn, tool counts, structures, learned clues, and advance 
   assert.match(html, /Iron/);
 });
 
+test('renderApp hides normal encounter actions once an encounter is resolved', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = attemptCapture(state);
+
+  const html = renderApp(state);
+
+  assert.match(html, /data-action="advance"(?![^>]*disabled)/);
+  assert.match(html, /data-action="strike"[^>]*disabled/);
+  assert.match(html, /data-action="guard"[^>]*disabled/);
+  assert.match(html, /data-action="probe-ash"[^>]*disabled/);
+  assert.match(html, /data-action="tool-snare-line"[^>]*disabled/);
+  assert.match(html, /data-action="hound-harry"[^>]*disabled/);
+  assert.match(html, /data-action="capture"[^>]*disabled/);
+});
+
 test('renderApp does not present one-step defense effects as persistent status fields', () => {
   const html = renderApp(createInitialState({ encounterIds: ['storm-antler'] }));
 
@@ -64,6 +82,18 @@ test('renderApp does not present one-step defense effects as persistent status f
   assert.doesNotMatch(html, /Brace:/);
   assert.match(html, /Guard/);
   assert.match(html, /Mireback: Brace/);
+});
+
+test('renderApp only shows confirmed probes as learned clues', () => {
+  let state = createInitialState({ encounterIds: ['chain-maw'] });
+  state = applyHeroProbe(state, 'stone');
+  state = applyHeroProbe(state, 'iron');
+
+  const html = renderApp(state);
+
+  assert.match(html, /Learned Clues/);
+  assert.match(html, /Iron/);
+  assert.doesNotMatch(html, /Stone/);
 });
 
 test('renderApp shows a learned clue summary on the expedition result screen', () => {

@@ -19,8 +19,9 @@ export function renderApp(state) {
 
   const target = state.currentEncounter.target;
   const currentHints = state.codexHints[target.id] ?? [];
+  const encounterResolved = canAdvanceEncounter(state);
   const captureDisabled = target.captureState !== 'bindable';
-  const advanceAllowed = canAdvanceEncounter(state);
+  const advanceAllowed = encounterResolved;
 
   return `
     <div class="layout">
@@ -37,20 +38,26 @@ export function renderApp(state) {
           <p>Advance: ${advanceAllowed ? 'Ready' : 'Locked'}</p>
         </div>
         <div class="actions">
-          <button data-action="strike">Strike</button>
-          <button data-action="guard">Guard</button>
-          <button data-action="probe-ash">Probe Ash</button>
-          <button data-action="probe-iron">Probe Iron</button>
-          <button data-action="probe-storm">Probe Storm</button>
-          <button data-action="tool-snare-line" ${renderDisabled(state.party.tools['snare-line'] === 0)}>
+          <button data-action="strike" ${renderDisabled(encounterResolved)}>Strike</button>
+          <button data-action="guard" ${renderDisabled(encounterResolved)}>Guard</button>
+          <button data-action="probe-ash" ${renderDisabled(encounterResolved)}>Probe Ash</button>
+          <button data-action="probe-iron" ${renderDisabled(encounterResolved)}>Probe Iron</button>
+          <button data-action="probe-storm" ${renderDisabled(encounterResolved)}>Probe Storm</button>
+          <button
+            data-action="tool-snare-line"
+            ${renderDisabled(encounterResolved || state.party.tools['snare-line'] === 0)}
+          >
             Snare Line
           </button>
-          <button data-action="tool-bait-stake" ${renderDisabled(state.party.tools['bait-stake'] === 0)}>
+          <button
+            data-action="tool-bait-stake"
+            ${renderDisabled(encounterResolved || state.party.tools['bait-stake'] === 0)}
+          >
             Bait Stake
           </button>
-          <button data-action="hound-harry">Grave Hound: Harry</button>
-          <button data-action="mireback-brace">Mireback: Brace</button>
-          <button data-action="capture" ${renderDisabled(captureDisabled)}>Capture</button>
+          <button data-action="hound-harry" ${renderDisabled(encounterResolved)}>Grave Hound: Harry</button>
+          <button data-action="mireback-brace" ${renderDisabled(encounterResolved)}>Mireback: Brace</button>
+          <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
           <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Advance</button>
         </div>
       </section>

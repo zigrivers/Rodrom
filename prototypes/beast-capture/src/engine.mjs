@@ -20,6 +20,10 @@ export function canAdvanceEncounter(state) {
   return isTerminalCaptureState(state.currentEncounter.target.captureState);
 }
 
+function isResolvedEncounter(state) {
+  return canAdvanceEncounter(state);
+}
+
 function consumeDefenseFlags(flags) {
   return {
     ...flags,
@@ -71,16 +75,22 @@ function finalizeEncounterAction(state, line) {
 }
 
 export function applyHeroProbe(state, attunement) {
+  if (isResolvedEncounter(state)) {
+    return state;
+  }
+
   const target = state.currentEncounter.target;
   const matched = attunement === target.primaryAttunement;
 
   return finalizeEncounterAction(
     {
       ...state,
-      codexHints: {
-        ...state.codexHints,
-        [target.id]: [...new Set([...(state.codexHints[target.id] ?? []), attunement])],
-      },
+      codexHints: matched
+        ? {
+            ...state.codexHints,
+            [target.id]: [...new Set([...(state.codexHints[target.id] ?? []), attunement])],
+          }
+        : state.codexHints,
       currentEncounter: {
         ...state.currentEncounter,
         target: {
@@ -98,6 +108,10 @@ export function applyHeroProbe(state, attunement) {
 }
 
 export function applyToolAction(state, toolId) {
+  if (isResolvedEncounter(state)) {
+    return state;
+  }
+
   const remaining = state.party.tools[toolId];
   if (!remaining) {
     return finalizeEncounterAction(state, `${toolId} is exhausted.`);
@@ -129,6 +143,10 @@ export function applyToolAction(state, toolId) {
 }
 
 export function applyCompanionAction(state, beastId, actionId) {
+  if (isResolvedEncounter(state)) {
+    return state;
+  }
+
   const beast = state.party.beasts[beastId];
   const target = state.currentEncounter.target;
 
@@ -184,6 +202,10 @@ export function applyCompanionAction(state, beastId, actionId) {
 }
 
 export function applyStrikeAction(state) {
+  if (isResolvedEncounter(state)) {
+    return state;
+  }
+
   const target = state.currentEncounter.target;
   const nextHealth = Math.max(0, target.health - 1);
 
@@ -204,6 +226,10 @@ export function applyStrikeAction(state) {
 }
 
 export function applyGuardAction(state) {
+  if (isResolvedEncounter(state)) {
+    return state;
+  }
+
   return finalizeEncounterAction(
     {
       ...state,
@@ -220,6 +246,10 @@ export function applyGuardAction(state) {
 }
 
 export function attemptCapture(state) {
+  if (isResolvedEncounter(state)) {
+    return state;
+  }
+
   const target = state.currentEncounter.target;
   if (target.captureState !== 'bindable') {
     return finalizeEncounterAction(state, `${target.name} is not ready to bind.`);

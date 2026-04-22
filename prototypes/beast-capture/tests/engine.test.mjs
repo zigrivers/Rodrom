@@ -90,3 +90,34 @@ test('captured encounters preserve learned clues into the expedition result summ
   assert.deepEqual(state.codexHints['ashwing-moth'], ['ash']);
   assert.equal(state.result.rank, 'success');
 });
+
+test('resolved encounters ignore later action dispatches instead of mutating state', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = attemptCapture(state);
+
+  const resolvedState = state;
+  const afterProbe = applyHeroProbe(state, 'storm');
+  const afterTool = applyToolAction(state, 'bait-stake');
+  const afterStrike = applyStrikeAction(state);
+  const afterGuard = applyGuardAction(state);
+  const afterBrace = applyCompanionAction(state, 'mireback-tortoise', 'brace');
+  const afterCapture = attemptCapture(state);
+
+  assert.equal(afterProbe, resolvedState);
+  assert.equal(afterTool, resolvedState);
+  assert.equal(afterStrike, resolvedState);
+  assert.equal(afterGuard, resolvedState);
+  assert.equal(afterBrace, resolvedState);
+  assert.equal(afterCapture, resolvedState);
+});
+
+test('only confirmed probes are recorded as codex hints', () => {
+  let state = createInitialState({ encounterIds: ['chain-maw'] });
+  state = applyHeroProbe(state, 'stone');
+  state = applyHeroProbe(state, 'iron');
+
+  assert.deepEqual(state.codexHints['chain-maw'], ['iron']);
+});
