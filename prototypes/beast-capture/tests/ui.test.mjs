@@ -39,6 +39,13 @@ test('the town (start screen) shows lore and an upgrade option', () => {
   assert.match(html, /data-action="buy-infirmary"/);
 });
 
+test('the town offers multiple distinct services to spend Lore on (cme.4)', () => {
+  const html = renderApp(createInitialState({ started: false, lore: 30 }));
+  assert.match(html, /data-action="buy-infirmary"/);
+  assert.match(html, /data-action="buy-quartermaster"/);
+  assert.match(html, /data-action="buy-scouts-lantern"/);
+});
+
 test('the result screen reports lore earned', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth'] });
   s = applyHeroProbe(s, 'ash');

@@ -650,3 +650,37 @@ test('the coach is on by default and can be disabled', () => {
   assert.equal(createInitialState().coach, true);
   assert.equal(createInitialState({ coach: false }).coach, false);
 });
+
+// cme.4 — town services beyond +HP: distinct Lore sinks that grant capabilities.
+test('Quartermaster raises field tool uses per run, scaling with level', () => {
+  const base = createInitialState();
+  assert.equal(base.party.tools['snare-line'], 2);
+  assert.equal(base.party.tools['bait-stake'], 2);
+
+  const stocked = createInitialState({ upgrades: { quartermaster: 2 } });
+  assert.equal(stocked.party.tools['snare-line'], 4);
+  assert.equal(stocked.party.tools['bait-stake'], 4);
+});
+
+test("Scout's Lantern pre-reveals the first quarries' attunements at run start", () => {
+  const lit = createInitialState({
+    encounterIds: ['chain-maw', 'storm-antler'],
+    upgrades: { 'scouts-lantern': 1 },
+  });
+  assert.ok(lit.codexHints['chain-maw']?.includes('iron'));
+  assert.ok(!(lit.codexHints['storm-antler'] ?? []).includes('storm'));
+
+  const brighter = createInitialState({
+    encounterIds: ['chain-maw', 'storm-antler'],
+    upgrades: { 'scouts-lantern': 2 },
+  });
+  assert.ok(brighter.codexHints['storm-antler']?.includes('storm'));
+});
+
+test('buying the Quartermaster service spends lore and stocks more tools', () => {
+  const town = createInitialState({ started: false, lore: 20, upgrades: {} });
+  const after = buyUpgrade(town, 'quartermaster');
+  assert.equal(after.upgrades.quartermaster, 1);
+  assert.equal(after.lore, 20 - upgradeCost('quartermaster', 0));
+  assert.equal(after.party.tools['snare-line'], 3);
+});
