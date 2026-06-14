@@ -34,6 +34,11 @@ export function renderApp(state) {
             ? `<p>Capture bonus: +${state.result.bonusLore} Lore from clean/fast captures${state.result.cleanCaptures > 0 ? ` (${state.result.cleanCaptures} clean — pre-bonded)` : ''}.</p>`
             : ''
         }
+        ${
+          state.result.dupesFused > 0
+            ? `<p>Fused ${state.result.dupesFused} duplicate ${state.result.dupesFused === 1 ? 'capture' : 'captures'} into deeper bonds (+${state.result.dupeLore} Lore).</p>`
+            : ''
+        }
         ${renderRoster(state.roster)}
         <button data-action="replay">Return to town</button>
         <h3>Learned Clue Summary</h3>
