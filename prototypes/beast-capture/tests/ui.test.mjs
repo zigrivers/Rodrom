@@ -38,6 +38,18 @@ test('the start screen lets you select which beasts to field', () => {
   assert.match(html, /data-action="toggle-mireback-tortoise"/);
 });
 
+test('the party picker lists captured roster beasts as fieldable', () => {
+  const html = renderApp(createInitialState({ started: false, roster: ['ashwing-moth'] }));
+  assert.match(html, /data-action="toggle-ashwing-moth"/);
+});
+
+test('a fielded captured beast gets its signature action button in an encounter', () => {
+  const html = renderApp(
+    createInitialState({ roster: ['chain-maw'], fielded: ['chain-maw'], encounterIds: ['veil-lynx'] })
+  );
+  assert.match(html, /Chain Maw: Slam/);
+});
+
 test('unfielded beasts get no action buttons in an encounter', () => {
   const html = renderApp(createInitialState({ fielded: ['mireback-tortoise'], encounterIds: ['chain-maw'] }));
   assert.doesNotMatch(html, /Grave Hound: Harry/);
