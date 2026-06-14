@@ -1,4 +1,4 @@
-import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
+import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY, OMENS } from './content.mjs';
 
 export function createTargetState(targetId, depth = 1) {
   const target = TARGET_BEASTS[targetId];
@@ -15,14 +15,18 @@ export function createTargetState(targetId, depth = 1) {
   };
 }
 
-// The tutorial beast always leads; the rest of the pool varies per run so a
-// fresh expedition isn't the same solved sequence every time (F12).
-const ENCOUNTER_POOL = ['chain-maw', 'veil-lynx', 'storm-antler'];
+// The tutorial beast leads only on the very first run; later runs rotate the
+// full pool so the opener (and order) varies, and the deception beast can open
+// a run once the player knows the basics (cme.6, was F12/P6).
+const FULL_POOL = ['ashwing-moth', 'chain-maw', 'veil-lynx', 'storm-antler'];
 
-export function buildEncounterOrder(variant = 0) {
-  const dropIndex = ((variant % ENCOUNTER_POOL.length) + ENCOUNTER_POOL.length) % ENCOUNTER_POOL.length;
-  const chosen = ENCOUNTER_POOL.filter((_, index) => index !== dropIndex);
-  return ['ashwing-moth', ...chosen];
+export function buildEncounterOrder(variant = 0, firstRun = false) {
+  if (firstRun) {
+    return ['ashwing-moth', 'chain-maw', 'storm-antler']; // gentle, concealment-free tutorial line
+  }
+  const n = FULL_POOL.length;
+  const start = ((variant % n) + n) % n;
+  return FULL_POOL.map((_, index) => FULL_POOL[(start + index) % n]);
 }
 
 // Allied beasts the player can choose to field, with their per-beast health.
@@ -122,11 +126,16 @@ export function createInitialState(options = {}) {
   tools['snare-line'] += quartermaster;
   tools['bait-stake'] += quartermaster;
 
+  // Run omen (cme.6): resolve the omen id to its definition (unknown -> none).
+  const omenDef = options.omen && OMENS[options.omen] ? { id: options.omen, ...OMENS[options.omen] } : null;
+
   // Scout's Lantern (cme.4): pre-reveal the first `level` quarries' attunements
   // as codex hints at run start (information sink; you still probe to lock in).
+  // Thin Veil omen (cme.6) reveals the opener the same way.
   const lantern = upgrades['scouts-lantern'] ?? 0;
+  const revealCount = Math.max(lantern, omenDef?.revealOpener ? 1 : 0);
   const codexHints = {};
-  for (let i = 0; i < Math.min(lantern, encounterIds.length); i += 1) {
+  for (let i = 0; i < Math.min(revealCount, encounterIds.length); i += 1) {
     const id = encounterIds[i];
     const attunement = TARGET_BEASTS[id]?.primaryAttunement;
     if (attunement) {
@@ -150,6 +159,8 @@ export function createInitialState(options = {}) {
     upgrades,
     // Which allied beasts are fielded this run (party composition).
     fielded,
+    // Run-level omen rolled at the start of the expedition (cme.6).
+    omen: omenDef,
     encounterIds,
     encounterIndex: 0,
     log: ['Expedition begins.'],
@@ -167,7 +178,7 @@ export function createInitialState(options = {}) {
       depth: 1,
       anchored: false,
       turn: 1,
-      pressure: 0,
+      pressure: omenDef?.startPressure ?? 0,
       riskLevel: 0,
       escapeProgress: 0,
       windowDecay: 0,

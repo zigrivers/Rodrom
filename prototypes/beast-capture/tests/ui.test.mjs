@@ -232,6 +232,12 @@ test('the encounter view shows the current layer depth', () => {
   assert.match(html, /Layer 1/);
 });
 
+test('the encounter view shows the active run omen (cme.6)', () => {
+  const html = renderApp(createInitialState({ encounterIds: ['chain-maw'], omen: 'restless-deep' }));
+  assert.match(html, /Omen:/);
+  assert.match(html, /Restless Deep/);
+});
+
 test('the encounter view conveys state through cues, not literal meters', () => {
   const html = renderApp(createInitialState({ encounterIds: ['chain-maw'] }));
 
