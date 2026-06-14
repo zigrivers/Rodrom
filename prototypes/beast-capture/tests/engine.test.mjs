@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { createInitialState, buildEncounterOrder } from '../src/state.mjs';
 import {
   advanceEncounter,
+  anchorExpedition,
+  anchorHeal,
   applyCompanionAction,
   applyGuardAction,
   applyHeroProbe,
@@ -373,6 +375,52 @@ test('a staked snare line holds an open capture window from decaying', () => {
   s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
 
   assert.equal(s.currentEncounter.target.captureState, 'bindable');
+});
+
+test('anchor recovery thins with depth', () => {
+  assert.equal(anchorHeal(1), 3);
+  assert.equal(anchorHeal(3), 1);
+  assert.equal(anchorHeal(5), 1);
+});
+
+test('anchoring sheds beast fatigue and marks the layer anchored', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  assert.equal(s.party.beasts['grave-hound'].fatigue, 1);
+
+  s = anchorExpedition(s);
+  assert.equal(s.party.beasts['grave-hound'].fatigue, 0);
+  assert.equal(s.currentEncounter.anchored, true);
+});
+
+test('anchoring heals a wounded leader, capped at max', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'storm-antler'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = advanceEncounter(s); // carryover wounds the leader
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+
+  const before = s.party.leader.health;
+  s = anchorExpedition(s);
+  assert.ok(s.party.leader.health > before);
+  assert.ok(s.party.leader.health <= s.party.leader.maxHealth);
+});
+
+test('anchoring is unavailable until the layer is resolved and only once per layer', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  assert.equal(anchorExpedition(s), s); // unresolved
+
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+  s = anchorExpedition(s);
+  const anchored = s;
+  assert.equal(anchorExpedition(s), anchored); // already anchored -> no-op
 });
 
 test('extracting after a resolved layer ends the run and banks the haul', () => {

@@ -171,6 +171,17 @@ test('learned clues from earlier encounters stay visible during play', () => {
   assert.match(html, /Ashwing Moth: Ash/i);
 });
 
+test('an Anchor option appears once a layer is resolved', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  assert.doesNotMatch(renderApp(s), /data-action="anchor"(?![^>]*disabled)/);
+
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+
+  assert.match(renderApp(s), /data-action="anchor"(?![^>]*disabled)/);
+});
+
 test('an Extract option appears once a layer is resolved', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
   assert.doesNotMatch(renderApp(s), /data-action="extract"(?![^>]*disabled)/);
