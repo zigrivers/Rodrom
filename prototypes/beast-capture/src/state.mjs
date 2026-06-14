@@ -57,6 +57,7 @@ export function buyUpgrade(state, key) {
     roster: state.roster,
     bonds: state.bonds,
     fielded: state.fielded,
+    coach: state.coach,
     lore: state.lore - cost,
     upgrades: { ...state.upgrades, [key]: level + 1 },
   });
@@ -115,6 +116,11 @@ export function createInitialState(options = {}) {
 
   const base = {
     started: options.started ?? true,
+    // Coaching guidance is on by default (teaches new players); turning it off
+    // demotes the coach to an oblique "tracker" so reading is a real skill (cme.3).
+    coach: options.coach ?? true,
+    // Per-run grades for each capture (clean/fast), scored into Lore + bond (cme.3).
+    captureLog: [],
     // Campaign-level roster of captured beasts, carried across runs.
     roster: options.roster ?? [],
     // Bond level per captured beast (times fielded), carried across runs.

@@ -119,11 +119,11 @@ test('a completed run earns lore from captures and depth reached', () => {
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = extractExpedition(s); // completes: 1 capture, depth 1 -> 1*3 + 1 = 4 lore
-
+  s = extractExpedition(s);
+  // base 1 capture, depth 1 -> 1*3 + 1 = 4; this clean+fast capture adds +3 (cme.3)
   assert.equal(s.expeditionComplete, true);
-  assert.equal(s.lore, 4);
-  assert.equal(s.result.loreEarned, 4);
+  assert.equal(s.lore, 7);
+  assert.equal(s.result.loreEarned, 7);
 });
 
 test('buying the infirmary upgrade spends lore and raises leader max HP', () => {
@@ -596,4 +596,57 @@ test('only confirmed probes are recorded as codex hints', () => {
   state = applyHeroProbe(state, 'iron');
 
   assert.deepEqual(state.codexHints['chain-maw'], ['iron']);
+});
+
+// cme.3 — capture scoring: clean (no wrong reads) and fast (quick bind) captures
+// earn bonus Lore, and a cleanly captured new species arrives pre-bonded.
+test('a clean, fast capture earns bonus lore', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0 });
+  s = applyHeroProbe(s, 'ash'); // turn 1, correct read
+  s = applyCompanionAction(s, 'grave-hound', 'harry'); // turn 2, corner
+  s = attemptCapture(s); // turn 3 -> clean + fast
+  s = extractExpedition(s);
+
+  // base 1*3 + depth 1 = 4, + clean(2) + fast(1) = 7
+  assert.equal(s.result.bonusLore, 3);
+  assert.equal(s.result.loreEarned, 7);
+});
+
+test('a sloppy capture (a wrong read) forfeits the clean bonus', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0 });
+  s = applyHeroProbe(s, 'storm'); // wrong read -> not clean
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s); // turn 4 -> still fast, not clean
+  s = extractExpedition(s);
+
+  // base 4 + fast(1) = 5, no clean bonus
+  assert.equal(s.result.bonusLore, 1);
+  assert.equal(s.result.loreEarned, 5);
+});
+
+test('a cleanly captured new beast joins the roster pre-bonded', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s); // clean
+  s = extractExpedition(s);
+
+  assert.equal(s.bonds['ashwing-moth'], 1);
+});
+
+test('a sloppily captured beast joins the roster unbonded', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  s = applyHeroProbe(s, 'storm'); // wrong read -> not clean
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  assert.equal(s.bonds['ashwing-moth'] ?? 0, 0);
+});
+
+test('the coach is on by default and can be disabled', () => {
+  assert.equal(createInitialState().coach, true);
+  assert.equal(createInitialState({ coach: false }).coach, false);
 });

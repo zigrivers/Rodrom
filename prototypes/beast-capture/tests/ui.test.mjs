@@ -277,3 +277,27 @@ test('renderApp shows a learned clue summary on the expedition result screen', (
   assert.match(html, /Ashwing Moth/);
   assert.match(html, /Ash/);
 });
+
+// cme.3 — the coach can be demoted to an oblique "tracker", and capture quality
+// is surfaced on the result screen.
+test('with the coach off, guidance is oblique rather than prescriptive', () => {
+  const html = renderApp(createInitialState({ coach: false, encounterIds: ['ashwing-moth'] }));
+  assert.match(html, /Read the quarry yourself/i);
+  assert.doesNotMatch(html, /probe Ash to lock it in/i);
+  assert.doesNotMatch(html, /make it cornered/i);
+});
+
+test('the coach can be toggled from the start screen', () => {
+  const html = renderApp(createInitialState({ started: false }));
+  assert.match(html, /data-action="toggle-coach"/);
+});
+
+test('the result screen reports the clean/fast capture bonus', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  assert.match(renderApp(s), /Capture bonus/i);
+});

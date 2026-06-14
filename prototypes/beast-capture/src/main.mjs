@@ -17,6 +17,7 @@ const ROSTER_KEY = 'spiral-descent-roster';
 const BONDS_KEY = 'spiral-descent-bonds';
 const LORE_KEY = 'spiral-descent-lore';
 const UPGRADES_KEY = 'spiral-descent-upgrades';
+const COACH_KEY = 'spiral-descent-coach';
 
 function loadJSON(key, fallback) {
   try {
@@ -32,6 +33,7 @@ function saveCampaign(s) {
     localStorage.setItem(BONDS_KEY, JSON.stringify(s.bonds ?? {}));
     localStorage.setItem(LORE_KEY, JSON.stringify(s.lore ?? 0));
     localStorage.setItem(UPGRADES_KEY, JSON.stringify(s.upgrades ?? {}));
+    localStorage.setItem(COACH_KEY, JSON.stringify(s.coach ?? true));
   } catch {
     // ignore storage errors (private mode, quota, etc.)
   }
@@ -42,6 +44,7 @@ const campaign = {
   bonds: loadJSON(BONDS_KEY, {}),
   lore: loadJSON(LORE_KEY, 0),
   upgrades: loadJSON(UPGRADES_KEY, {}),
+  coach: loadJSON(COACH_KEY, true),
 };
 
 let state = createInitialState({ started: false, ...campaign });
@@ -57,6 +60,7 @@ function startExpedition() {
     lore: state.lore,
     upgrades: state.upgrades,
     fielded: state.fielded,
+    coach: state.coach,
   });
 }
 
@@ -137,7 +141,12 @@ document.addEventListener('click', (event) => {
         lore: state.lore,
         upgrades: state.upgrades,
         fielded: state.fielded,
+        coach: state.coach,
       });
+      break;
+    case 'toggle-coach':
+      // Coach only drives guidance text, so flip it in place — never reset the run.
+      state = { ...state, coach: !(state.coach ?? true) };
       break;
     default:
       if (button.dataset.action.startsWith('buy-')) {
@@ -157,6 +166,7 @@ document.addEventListener('click', (event) => {
           lore: state.lore,
           upgrades: state.upgrades,
           fielded,
+          coach: state.coach,
         });
       }
       break;
