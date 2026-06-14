@@ -95,7 +95,7 @@ export function applyHeroProbe(state, attunement) {
         ...state.currentEncounter,
         target: {
           ...target,
-          captureState: matched && !isTerminalCaptureState(target.captureState) ? 'probed' : target.captureState,
+          captureState: matched && target.captureState === 'unreadable' ? 'probed' : target.captureState,
         },
         flags: {
           ...state.currentEncounter.flags,

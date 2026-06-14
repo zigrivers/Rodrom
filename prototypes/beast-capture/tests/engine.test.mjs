@@ -114,6 +114,19 @@ test('resolved encounters ignore later action dispatches instead of mutating sta
   assert.equal(afterCapture, resolvedState);
 });
 
+test('probing while bindable does not collapse the capture window', () => {
+  let state = createInitialState({ encounterIds: ['ashwing-moth'] });
+  state = applyHeroProbe(state, 'ash');
+  state = applyToolAction(state, 'snare-line');
+  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  assert.equal(state.currentEncounter.target.captureState, 'bindable');
+
+  const afterProbe = applyHeroProbe(state, 'ash');
+
+  assert.equal(afterProbe.currentEncounter.target.captureState, 'bindable');
+  assert.equal(attemptCapture(afterProbe).party.captures.at(-1), 'ashwing-moth');
+});
+
 test('only confirmed probes are recorded as codex hints', () => {
   let state = createInitialState({ encounterIds: ['chain-maw'] });
   state = applyHeroProbe(state, 'stone');
