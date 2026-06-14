@@ -102,6 +102,18 @@ test('renderApp hides normal encounter actions once an encounter is resolved', (
   assert.match(html, /data-action="capture"[^>]*disabled/);
 });
 
+test('learned clues from earlier encounters stay visible during play', () => {
+  let s = createInitialState();
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = advanceEncounter(s); // now on the second encounter
+
+  const html = renderApp(s);
+  assert.match(html, /Codex/);
+  assert.match(html, /Ashwing Moth: Ash/i);
+});
+
 test('renderApp offers a withdraw option during an active encounter', () => {
   const html = renderApp(createInitialState({ encounterIds: ['storm-antler'] }));
   assert.match(html, /data-action="withdraw"(?![^>]*disabled)/);

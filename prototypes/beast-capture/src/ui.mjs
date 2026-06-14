@@ -80,6 +80,8 @@ export function renderApp(state) {
         <ul class="summary-list">${renderStructures(state.currentEncounter.structures)}</ul>
         <h3>Learned Clues</h3>
         <ul class="summary-list">${renderHints(currentHints)}</ul>
+        <h3>Codex (this run)</h3>
+        ${renderClueSummary(state.codexHints)}
         <h3>Log</h3>
         <div class="log">${state.log.map((line) => `<div>${line}</div>`).join('')}</div>
       </aside>
