@@ -176,6 +176,11 @@ test('renderApp offers a withdraw option during an active encounter', () => {
   assert.match(html, /data-action="withdraw"(?![^>]*disabled)/);
 });
 
+test('the encounter view shows the current layer depth', () => {
+  const html = renderApp(createInitialState({ encounterIds: ['chain-maw'] }));
+  assert.match(html, /Layer 1/);
+});
+
 test('the encounter view conveys state through cues, not literal meters', () => {
   const html = renderApp(createInitialState({ encounterIds: ['chain-maw'] }));
 

@@ -11,8 +11,10 @@ import {
   applyToolAction,
   attemptCapture,
   canAdvanceEncounter,
+  pressurePerTurn,
   withdrawEncounter,
 } from '../src/engine.mjs';
+import { createTargetState } from '../src/state.mjs';
 
 test('the default expedition captures all three encounters via their distinct conditions', () => {
   let state = createInitialState();
@@ -193,6 +195,39 @@ test('a new run preserves the prior roster and starts with no run captures', () 
 
   assert.deepEqual(s.roster, ['ashwing-moth', 'chain-maw']);
   assert.deepEqual(s.party.captures, []);
+});
+
+test('depth scales the per-turn pressure', () => {
+  assert.equal(pressurePerTurn(1), 1);
+  assert.equal(pressurePerTurn(3), 2);
+  assert.equal(pressurePerTurn(5), 3);
+});
+
+test('a run tracks descent depth and deeper layers press harder', () => {
+  let s = createInitialState();
+  assert.equal(s.currentEncounter.depth, 1);
+
+  // descend to layer 3
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = advanceEncounter(s);
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+  s = advanceEncounter(s);
+
+  assert.equal(s.currentEncounter.depth, 3);
+  const before = s.currentEncounter.pressure;
+  s = applyStrikeAction(s); // undefended turn at depth 3
+  assert.equal(s.currentEncounter.pressure - before, 2);
+});
+
+test('deeper layers field tougher targets', () => {
+  assert.equal(
+    createTargetState('chain-maw', 3).maxHealth,
+    createTargetState('chain-maw', 1).maxHealth + 2
+  );
 });
 
 test('advance is blocked until the current encounter is captured or defeated', () => {
