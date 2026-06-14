@@ -11,6 +11,32 @@ export const PLAYER_BEASTS = {
   },
 };
 
+// Each posture-changing action has a "kind"; a target is driven to its bind
+// posture by ANY fielded beast/tool that provides the matching kind, so
+// captured beasts expand your toolkit.
+export const COMPANION_ACTION_KIND = {
+  harry: 'corner',
+  flit: 'corner',
+  shove: 'stagger',
+  slam: 'stagger',
+  'scent-read': 'reveal',
+  sense: 'reveal',
+  ground: 'ground',
+};
+
+export const TOOL_ACTION_KIND = {
+  'bait-stake': 'ground',
+};
+
+// A captured target beast, when fielded as an ally, contributes a signature
+// action (its action kind) and a passive affinity (its attunement).
+export const CAPTURED_ALLY = {
+  'ashwing-moth': { action: 'flit', label: 'Flit' },
+  'chain-maw': { action: 'slam', label: 'Slam' },
+  'veil-lynx': { action: 'sense', label: 'Sense' },
+  'storm-antler': { action: 'ground', label: 'Ground' },
+};
+
 // Each target's capture condition is posture-driven: the player must probe the
 // correct attunement AND drive the beast into its `bindPosture` using the
 // beast-specific `postureTrigger` action. `concealed` beasts read deceptively
@@ -23,7 +49,7 @@ export const TARGET_BEASTS = {
     falseLead: 'flame',
     initialPosture: 'skittish',
     bindPosture: 'cornered',
-    postureTrigger: { type: 'companion', beastId: 'grave-hound', actionId: 'harry' },
+    bindKind: 'corner',
     initialCaptureState: 'unreadable',
     maxHealth: 2,
   },
@@ -34,7 +60,7 @@ export const TARGET_BEASTS = {
     falseLead: 'stone',
     initialPosture: 'charging',
     bindPosture: 'staggered',
-    postureTrigger: { type: 'companion', beastId: 'mireback-tortoise', actionId: 'shove' },
+    bindKind: 'stagger',
     initialCaptureState: 'unreadable',
     maxHealth: 4,
   },
@@ -45,7 +71,7 @@ export const TARGET_BEASTS = {
     falseLead: 'silence',
     initialPosture: 'hidden',
     bindPosture: 'revealed',
-    postureTrigger: { type: 'companion', beastId: 'grave-hound', actionId: 'scent-read' },
+    bindKind: 'reveal',
     concealed: true,
     initialCaptureState: 'unreadable',
     maxHealth: 3,
@@ -57,7 +83,7 @@ export const TARGET_BEASTS = {
     falseLead: 'light',
     initialPosture: 'braced',
     bindPosture: 'grounded',
-    postureTrigger: { type: 'tool', toolId: 'bait-stake' },
+    bindKind: 'ground',
     initialCaptureState: 'unreadable',
     maxHealth: 5,
   },

@@ -1,4 +1,4 @@
-import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS } from './content.js';
+import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.js';
 import { canAdvanceEncounter, tensionLabel } from './engine.js';
 
 export function renderApp(state) {
@@ -11,7 +11,7 @@ export function renderApp(state) {
         ${renderRoster(state.roster)}
         <h3>Party — who do you field?</h3>
         <p>Each beast brings different actions, so your party decides which captures are even possible.</p>
-        ${renderPartyPicker(state.fielded)}
+        ${renderPartyPicker(state.fielded, state.roster, state.bonds)}
         <button data-action="start-expedition">Start Expedition</button>
       </section>
     `;
@@ -90,6 +90,13 @@ export function renderApp(state) {
           <button data-action="mireback-burden-shelter" ${renderDisabled(encounterResolved)}>Mireback: Burden Shelter</button>`
               : ''
           }
+          ${Object.keys(state.party.beasts)
+            .filter((id) => CAPTURED_ALLY[id])
+            .map(
+              (id) =>
+                `<button data-action="companion:${id}:${CAPTURED_ALLY[id].action}" ${renderDisabled(encounterResolved)}>${state.party.beasts[id].name}: ${CAPTURED_ALLY[id].label}</button>`
+            )
+            .join('')}
           <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
           <button data-action="withdraw" ${renderDisabled(encounterResolved)}>Withdraw</button>
           <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Advance</button>
@@ -121,11 +128,14 @@ function renderDisabled(disabled) {
   return disabled ? 'disabled' : '';
 }
 
-function renderPartyPicker(fielded) {
-  return ['grave-hound', 'mireback-tortoise']
+function renderPartyPicker(fielded, roster, bonds = {}) {
+  const ids = ['grave-hound', 'mireback-tortoise', ...new Set(roster ?? [])];
+  return ids
     .map((id) => {
+      const name = PLAYER_BEASTS[id]?.name ?? TARGET_BEASTS[id]?.name ?? id;
       const fieldedNow = fielded.includes(id);
-      return `<button data-action="toggle-${id}">${PLAYER_BEASTS[id].name}: ${fieldedNow ? 'fielded' : 'benched'}</button>`;
+      const bond = CAPTURED_ALLY[id] && (bonds[id] ?? 0) > 0 ? ` (bond ${bonds[id]})` : '';
+      return `<button data-action="toggle-${id}">${name}${bond}: ${fieldedNow ? 'fielded' : 'benched'}</button>`;
     })
     .join('');
 }
@@ -191,12 +201,18 @@ function formatLabel(value) {
 
 // Contextual coaching so a first-time player can find the capture path (F1).
 function triggerHint(def) {
-  const trigger = def.postureTrigger;
-  if (trigger.type === 'tool') {
-    return `place the ${TOOLS[trigger.toolId]?.name ?? trigger.toolId}`;
+  switch (def.bindKind) {
+    case 'corner':
+      return 'corner it (Harry, or a captured Ashwing)';
+    case 'stagger':
+      return 'stagger it (Shove, or a captured Chain Maw)';
+    case 'reveal':
+      return 'reveal it (Scent Read, or a captured Veil Lynx)';
+    case 'ground':
+      return 'ground it (Bait Stake, or a captured Storm Antler)';
+    default:
+      return 'set its posture';
   }
-  const beastName = trigger.beastId === 'grave-hound' ? 'Grave Hound' : 'Mireback';
-  return `use ${beastName}: ${formatLabel(trigger.actionId)}`;
 }
 
 function captureGuidance(state) {

@@ -1,5 +1,5 @@
-import { createTargetState } from './state.js';
-import { TARGET_BEASTS } from './content.js';
+import { createTargetState, seedEncounterKnowledge } from './state.js';
+import { TARGET_BEASTS, COMPANION_ACTION_KIND, TOOL_ACTION_KIND, CAPTURED_ALLY } from './content.js';
 
 // Consequence tuning (F4/F7/F11). Kept as named constants for easy balancing.
 const ESCAPE_READS = 3; // wrong-attunement probes before the beast flees
@@ -14,11 +14,18 @@ function appendLog(state, line) {
 // Finish a run: record the result and bank this run's captures into the
 // campaign roster so captured beasts persist across runs.
 function completeExpedition(state, rank) {
+  const bonds = { ...state.bonds };
+  for (const id of state.fielded) {
+    if (CAPTURED_ALLY[id]) {
+      bonds[id] = (bonds[id] ?? 0) + 1;
+    }
+  }
   return {
     ...state,
     expeditionComplete: true,
     result: { rank, captures: state.party.captures.length },
     roster: [...state.roster, ...state.party.captures],
+    bonds,
   };
 }
 
@@ -270,7 +277,7 @@ export function applyToolAction(state, toolId) {
 
   const target = enc.target;
   const def = beastDef(target);
-  const triggersPosture = def.postureTrigger.type === 'tool' && def.postureTrigger.toolId === toolId;
+  const triggersPosture = TOOL_ACTION_KIND[toolId] != null && TOOL_ACTION_KIND[toolId] === def.bindKind;
 
   const flags = toolId === 'snare-line' ? { ...enc.flags, snared: true } : enc.flags;
   const updatedTarget = { ...target };
@@ -317,10 +324,8 @@ export function applyCompanionAction(state, beastId, actionId) {
   const target = enc.target;
   const def = beastDef(target);
 
-  const triggersPosture =
-    def.postureTrigger.type === 'companion' &&
-    def.postureTrigger.beastId === beastId &&
-    def.postureTrigger.actionId === actionId;
+  const kind = COMPANION_ACTION_KIND[actionId] ?? null;
+  const triggersPosture = kind != null && kind === def.bindKind;
 
   const updatedTarget = { ...target };
   let flags = { ...enc.flags };
@@ -331,20 +336,22 @@ export function applyCompanionAction(state, beastId, actionId) {
     updatedTarget.posture = def.bindPosture;
   }
 
-  if (beastId === 'grave-hound' && actionId === 'scent-read') {
+  if (kind === 'reveal') {
+    // Scent Read / Sense expose the true attunement (and reveal concealed beasts).
     codexHints = addHint(codexHints, target.id, target.primaryAttunement);
     line = triggersPosture
-      ? `${beast.name} scents ${target.name}: it responds to ${target.primaryAttunement}, and slips into the open.`
-      : `${beast.name} scents ${target.name}: it responds to ${target.primaryAttunement}.`;
+      ? `${beast.name} flushes out ${target.name}: it responds to ${target.primaryAttunement}, now ${def.bindPosture}.`
+      : `${beast.name} reads ${target.name}: it responds to ${target.primaryAttunement}.`;
   } else if (triggersPosture) {
-    line = `${beast.name} forces ${target.name} ${actionId === 'harry' ? 'into a corner' : 'off balance'}; it is ${def.bindPosture}.`;
-  } else if (beastId === 'grave-hound' && actionId === 'warning-bark') {
+    const verb = kind === 'corner' ? 'into a corner' : kind === 'stagger' ? 'off balance' : 'to the ground';
+    line = `${beast.name} forces ${target.name} ${verb}; it is ${def.bindPosture}.`;
+  } else if (actionId === 'warning-bark') {
     flags.guardRaised = true;
     line = `${beast.name} barks a warning; the expedition steadies.`;
-  } else if (beastId === 'mireback-tortoise' && actionId === 'brace') {
+  } else if (actionId === 'brace') {
     flags.braceRaised = true;
     line = `${beast.name} braces the line.`;
-  } else if (beastId === 'mireback-tortoise' && actionId === 'burden-shelter') {
+  } else if (actionId === 'burden-shelter') {
     flags.braceRaised = true;
     line = `${beast.name} shelters the supplies and steadies the line.`;
   }
@@ -497,30 +504,29 @@ export function advanceEncounter(state) {
     );
   }
 
-  return appendLog(
-    {
-      ...state,
-      encounterIndex: nextIndex,
-      currentEncounter: {
-        target: createTargetState(state.encounterIds[nextIndex]),
-        turn: 1,
-        pressure: 0,
-        riskLevel: carryoverPressure,
-        escapeProgress: 0,
-        windowDecay: 0,
-        structures: [],
-        flags: {
-          attunementMatch: false,
-          guardRaised: false,
-          braceRaised: false,
-          alerted: carryoverPressure > 0,
-        },
-      },
-      party: {
-        ...state.party,
-        leader: { ...state.party.leader, health: carriedLeaderHealth },
+  const advanced = seedEncounterKnowledge({
+    ...state,
+    encounterIndex: nextIndex,
+    currentEncounter: {
+      target: createTargetState(state.encounterIds[nextIndex]),
+      turn: 1,
+      pressure: 0,
+      riskLevel: carryoverPressure,
+      escapeProgress: 0,
+      windowDecay: 0,
+      structures: [],
+      flags: {
+        attunementMatch: false,
+        guardRaised: false,
+        braceRaised: false,
+        alerted: carryoverPressure > 0,
       },
     },
-    `Advance to encounter ${nextIndex + 1}.`
-  );
+    party: {
+      ...state.party,
+      leader: { ...state.party.leader, health: carriedLeaderHealth },
+    },
+  });
+
+  return appendLog(advanced, `Advance to encounter ${nextIndex + 1}.`);
 }
