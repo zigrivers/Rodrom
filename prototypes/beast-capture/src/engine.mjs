@@ -308,8 +308,12 @@ export function applyCompanionAction(state, beastId, actionId) {
     return state;
   }
 
-  const enc = state.currentEncounter;
   const beast = state.party.beasts[beastId];
+  if (!beast) {
+    return state; // beast not fielded this run
+  }
+
+  const enc = state.currentEncounter;
   const target = enc.target;
   const def = beastDef(target);
 
