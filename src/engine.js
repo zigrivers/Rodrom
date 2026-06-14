@@ -7,6 +7,12 @@ const FRENZY_PRESSURE = 6; // pressure at which an undefended turn wounds the le
 const FRENZY_LEADER_DAMAGE = 1;
 const WINDOW_GRACE = 3; // open-window turns before a bindable beast slips loose
 
+// Deeper layers press harder: per-turn pressure rises with descent depth, so
+// frenzy and failure scale with depth (run structure, t9i.3).
+export function pressurePerTurn(depth) {
+  return 1 + Math.floor(((depth ?? 1) - 1) / 2);
+}
+
 function appendLog(state, line) {
   return { ...state, log: [...state.log, line] };
 }
@@ -152,7 +158,7 @@ function resolveEncounterPressure(state) {
         : 'Mireback Brace absorbs the counter-pressure.'
     );
   } else {
-    const newPressure = enc.pressure + 1;
+    const newPressure = enc.pressure + pressurePerTurn(enc.depth);
     next = { ...next, currentEncounter: { ...next.currentEncounter, pressure: newPressure } };
 
     if (newPressure >= FRENZY_PRESSURE) {
@@ -508,7 +514,8 @@ export function advanceEncounter(state) {
     ...state,
     encounterIndex: nextIndex,
     currentEncounter: {
-      target: createTargetState(state.encounterIds[nextIndex]),
+      target: createTargetState(state.encounterIds[nextIndex], nextIndex + 1),
+      depth: nextIndex + 1,
       turn: 1,
       pressure: 0,
       riskLevel: carryoverPressure,
