@@ -102,6 +102,22 @@ test('renderApp hides normal encounter actions once an encounter is resolved', (
   assert.match(html, /data-action="capture"[^>]*disabled/);
 });
 
+test('the encounter view conveys state through cues, not literal meters', () => {
+  const html = renderApp(createInitialState({ encounterIds: ['chain-maw'] }));
+
+  assert.doesNotMatch(html, /Capture state:/);
+  assert.doesNotMatch(html, /Pressure: \d/);
+  assert.match(html, /Posture:/);
+  assert.match(html, /calm|restless|agitated|frenzied/i);
+});
+
+test('the encounter view warns when bad reads are spooking the quarry', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'stone'); // wrong read raises escape risk
+
+  assert.match(renderApp(s), /spooking it/i);
+});
+
 test('renderApp does not present one-step defense effects as persistent status fields', () => {
   const html = renderApp(createInitialState({ encounterIds: ['storm-antler'] }));
 

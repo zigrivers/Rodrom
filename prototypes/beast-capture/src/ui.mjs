@@ -1,5 +1,5 @@
 import { TARGET_BEASTS, TOOLS } from './content.mjs';
-import { canAdvanceEncounter } from './engine.mjs';
+import { canAdvanceEncounter, tensionLabel } from './engine.mjs';
 
 export function renderApp(state) {
   if (state.expeditionComplete) {
@@ -33,8 +33,9 @@ export function renderApp(state) {
           <p>Turn: ${state.currentEncounter.turn}</p>
           <p>Target HP: ${target.health}/${target.maxHealth}</p>
           <p>Posture: ${target.posture}</p>
-          <p>Capture state: ${describeCaptureState(target.captureState)}</p>
-          <p>Pressure: ${state.currentEncounter.pressure}</p>
+          <p>The quarry seems ${tensionLabel(state.currentEncounter.pressure)}${
+            state.currentEncounter.escapeProgress > 0 ? '; wrong reads are spooking it' : ''
+          }.</p>
           <p>Carryover Risk: ${state.currentEncounter.riskLevel}</p>
           <p>Advance: ${advanceAllowed ? 'Ready' : 'Locked'}</p>
         </div>
@@ -167,15 +168,3 @@ function captureGuidance(state) {
   return `It responds to ${target.primaryAttunement}. Now ${triggerHint(def)} to make it ${def.bindPosture}.`;
 }
 
-function describeCaptureState(value) {
-  const map = {
-    unreadable: 'Unreadable',
-    probed: 'Disturbed',
-    bindable: 'Bindable',
-    defeated: 'Defeated',
-    captured: 'Captured',
-    escaped: 'Escaped',
-  };
-
-  return map[value] ?? value;
-}

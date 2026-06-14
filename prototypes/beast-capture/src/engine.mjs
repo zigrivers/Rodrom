@@ -44,6 +44,20 @@ function isTargetActive(target) {
   return !isTerminalCaptureState(target.captureState);
 }
 
+// Qualitative read of how close pressure is to a frenzy, for inferable cues (F8).
+export function tensionLabel(pressure) {
+  if (pressure >= FRENZY_PRESSURE) {
+    return 'frenzied';
+  }
+  if (pressure >= FRENZY_PRESSURE - 2) {
+    return 'agitated';
+  }
+  if (pressure > 0) {
+    return 'restless';
+  }
+  return 'calm';
+}
+
 export function canAdvanceEncounter(state) {
   return isTerminalCaptureState(state.currentEncounter.target.captureState);
 }
