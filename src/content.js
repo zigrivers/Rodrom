@@ -31,10 +31,34 @@ export const TOOL_ACTION_KIND = {
 // A captured target beast, when fielded as an ally, contributes a signature
 // action (its action kind) and a passive affinity (its attunement).
 export const CAPTURED_ALLY = {
-  'ashwing-moth': { action: 'flit', label: 'Flit' },
-  'chain-maw': { action: 'slam', label: 'Slam' },
-  'veil-lynx': { action: 'sense', label: 'Sense' },
-  'storm-antler': { action: 'ground', label: 'Ground' },
+  'ashwing-moth': {
+    action: 'flit',
+    label: 'Flit',
+    passive: 'skittish-kin',
+    passiveName: 'Skittish Kin',
+    passiveDesc: 'the quarry tolerates extra wrong reads before fleeing (scales with bond)',
+  },
+  'chain-maw': {
+    action: 'slam',
+    label: 'Slam',
+    passive: 'iron-hold',
+    passiveName: 'Iron Hold',
+    passiveDesc: 'capture windows do not decay',
+  },
+  'veil-lynx': {
+    action: 'sense',
+    label: 'Sense',
+    passive: 'veilsight',
+    passiveName: 'Veilsight',
+    passiveDesc: 'reveals each target attunement on arrival, even concealed ones',
+  },
+  'storm-antler': {
+    action: 'ground',
+    label: 'Ground',
+    passive: 'grounding-aura',
+    passiveName: 'Grounding Aura',
+    passiveDesc: 'the quarry presses less each turn',
+  },
 };
 
 // Each target's capture condition is posture-driven: the player must probe the
