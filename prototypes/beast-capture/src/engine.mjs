@@ -1,8 +1,28 @@
 import { createTargetState } from './state.mjs';
 import { TARGET_BEASTS } from './content.mjs';
 
+// Consequence tuning (F4/F7/F11). Kept as named constants for easy balancing.
+const ESCAPE_READS = 3; // wrong-attunement probes before the beast flees
+const FRENZY_PRESSURE = 6; // pressure at which an undefended turn wounds the leader
+const FRENZY_LEADER_DAMAGE = 1;
+const WINDOW_GRACE = 3; // open-window turns before a bindable beast slips loose
+
 function appendLog(state, line) {
   return { ...state, log: [...state.log, line] };
+}
+
+// Deterministically spend one use of the most-stocked tool (supply loss, F4).
+function loseSupply(tools) {
+  let pick = null;
+  for (const [id, count] of Object.entries(tools)) {
+    if (count > 0 && (pick === null || count > tools[pick])) {
+      pick = id;
+    }
+  }
+  if (pick === null) {
+    return { tools, lost: null };
+  }
+  return { tools: { ...tools, [pick]: tools[pick] - 1 }, lost: pick };
 }
 
 function beastDef(target) {
@@ -17,7 +37,7 @@ function addHint(codexHints, targetId, attunement) {
 }
 
 function isTerminalCaptureState(value) {
-  return value === 'defeated' || value === 'captured';
+  return value === 'defeated' || value === 'captured' || value === 'escaped';
 }
 
 function isTargetActive(target) {
@@ -75,32 +95,87 @@ function consumeDefenseFlags(flags) {
 }
 
 function resolveEncounterPressure(state) {
-  const { currentEncounter } = state;
-  const { target, flags } = currentEncounter;
+  const enc = state.currentEncounter;
+  const target = enc.target;
 
   if (!isTargetActive(target)) {
     return state;
   }
 
+  const flags = enc.flags;
   const defended = flags.guardRaised || flags.braceRaised;
-  const pressureGain = defended ? 0 : 1;
-  const line = flags.guardRaised
-    ? 'Guard holds and keeps the pressure off the expedition.'
-    : flags.braceRaised
-      ? 'Mireback Brace absorbs the counter-pressure.'
-      : `${target.name} presses back on the expedition.`;
 
-  return appendLog(
-    {
-      ...state,
-      currentEncounter: {
-        ...currentEncounter,
-        pressure: currentEncounter.pressure + pressureGain,
-        flags: consumeDefenseFlags(flags),
-      },
-    },
-    line
-  );
+  let next = {
+    ...state,
+    currentEncounter: { ...enc, flags: consumeDefenseFlags(flags) },
+  };
+
+  if (defended) {
+    next = appendLog(
+      next,
+      flags.guardRaised
+        ? 'Guard holds and keeps the pressure off the expedition.'
+        : 'Mireback Brace absorbs the counter-pressure.'
+    );
+  } else {
+    const newPressure = enc.pressure + 1;
+    next = { ...next, currentEncounter: { ...next.currentEncounter, pressure: newPressure } };
+
+    if (newPressure >= FRENZY_PRESSURE) {
+      const woundedLeader = {
+        ...next.party.leader,
+        health: Math.max(0, next.party.leader.health - FRENZY_LEADER_DAMAGE),
+      };
+      const { tools, lost } = loseSupply(next.party.tools);
+      next = { ...next, party: { ...next.party, leader: woundedLeader, tools } };
+      next = appendLog(
+        next,
+        `${target.name} frenzies! The leader is wounded${lost ? ` and a ${lost} is lost` : ''}.`
+      );
+
+      if (woundedLeader.health <= 0) {
+        return appendLog(
+          {
+            ...next,
+            expeditionComplete: true,
+            result: { rank: 'expedition-failure', captures: next.party.captures.length },
+          },
+          'The leader falls. The expedition fails.'
+        );
+      }
+    } else {
+      next = appendLog(next, `${target.name} presses back on the expedition.`);
+    }
+  }
+
+  return decayCaptureWindow(next);
+}
+
+// A reached capture window does not last forever: stalling while bindable lets
+// the beast slip loose (greed, F4). The collapse is telegraphed, never silent.
+function decayCaptureWindow(state) {
+  const enc = state.currentEncounter;
+  const target = enc.target;
+  if (target.captureState !== 'bindable') {
+    return state;
+  }
+
+  const decay = (enc.windowDecay ?? 0) + 1;
+  if (decay >= WINDOW_GRACE) {
+    const def = beastDef(target);
+    const relaxed = { ...target, posture: def.initialPosture };
+    relaxed.captureState = deriveCaptureState(relaxed, enc.flags);
+    return appendLog(
+      { ...state, currentEncounter: { ...enc, target: relaxed, windowDecay: 0 } },
+      `${target.name} slips loose — the capture window closes.`
+    );
+  }
+
+  const withDecay = { ...state, currentEncounter: { ...enc, windowDecay: decay } };
+  if (decay === WINDOW_GRACE - 1) {
+    return appendLog(withDecay, `${target.name} strains against the hold — the window is closing. Bind now!`);
+  }
+  return withDecay;
 }
 
 function finalizeEncounterAction(state, line) {
@@ -129,17 +204,34 @@ export function applyHeroProbe(state, attunement) {
     ...enc.flags,
     attunementMatch: enc.flags.attunementMatch || matched,
   };
-  const updatedTarget = { ...target };
-  updatedTarget.captureState = deriveCaptureState(updatedTarget, flags);
+  const escapeProgress = matched ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
+  const escaped = !matched && escapeProgress >= ESCAPE_READS;
 
-  return finalizeEncounterAction(
-    {
-      ...state,
-      codexHints: matched ? addHint(state.codexHints, target.id, attunement) : state.codexHints,
-      currentEncounter: { ...enc, target: updatedTarget, flags },
-    },
-    reacts ? `${target.name} reacts to ${attunement}.` : `${target.name} rejects the ${attunement} probe.`
-  );
+  const updatedTarget = { ...target };
+  updatedTarget.captureState = escaped ? 'escaped' : deriveCaptureState(updatedTarget, flags);
+
+  const probeLine = reacts
+    ? `${target.name} reacts to ${attunement}.`
+    : `${target.name} rejects the ${attunement} probe.`;
+
+  const baseState = {
+    ...state,
+    codexHints: matched ? addHint(state.codexHints, target.id, attunement) : state.codexHints,
+    currentEncounter: { ...enc, target: updatedTarget, flags, escapeProgress },
+  };
+
+  if (escaped) {
+    const { tools, lost } = loseSupply(baseState.party.tools);
+    let fled = { ...baseState, party: { ...baseState.party, tools } };
+    fled = appendLog(fled, probeLine);
+    fled = appendLog(fled, `${target.name} breaks the read and escapes${lost ? `, scattering a ${lost}` : ''}.`);
+    return {
+      ...fled,
+      currentEncounter: { ...fled.currentEncounter, turn: fled.currentEncounter.turn + 1 },
+    };
+  }
+
+  return finalizeEncounterAction(baseState, probeLine);
 }
 
 export function applyToolAction(state, toolId) {
@@ -339,6 +431,21 @@ export function advanceEncounter(state) {
     );
   }
 
+  const carriedLeaderHealth =
+    carryoverPressure > 0 ? Math.max(0, state.party.leader.health - 1) : state.party.leader.health;
+
+  if (carriedLeaderHealth <= 0) {
+    return appendLog(
+      {
+        ...state,
+        expeditionComplete: true,
+        result: { rank: 'expedition-failure', captures },
+        party: { ...state.party, leader: { ...state.party.leader, health: 0 } },
+      },
+      'The leader does not recover from the descent. The expedition fails.'
+    );
+  }
+
   return appendLog(
     {
       ...state,
@@ -348,6 +455,8 @@ export function advanceEncounter(state) {
         turn: 1,
         pressure: 0,
         riskLevel: carryoverPressure,
+        escapeProgress: 0,
+        windowDecay: 0,
         structures: [],
         flags: {
           attunementMatch: false,
@@ -358,10 +467,7 @@ export function advanceEncounter(state) {
       },
       party: {
         ...state.party,
-        leader: {
-          ...state.party.leader,
-          health: carryoverPressure > 0 ? Math.max(0, state.party.leader.health - 1) : state.party.leader.health,
-        },
+        leader: { ...state.party.leader, health: carriedLeaderHealth },
       },
     },
     `Advance to encounter ${nextIndex + 1}.`

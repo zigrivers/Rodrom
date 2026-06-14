@@ -43,6 +43,8 @@ export function createInitialState(options = {}) {
       turn: 1,
       pressure: 0,
       riskLevel: 0,
+      escapeProgress: 0,
+      windowDecay: 0,
       structures: [],
       flags: {
         attunementMatch: false,

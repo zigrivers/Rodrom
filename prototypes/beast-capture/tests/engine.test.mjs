@@ -149,6 +149,73 @@ test('captured encounters preserve learned clues into the expedition result summ
   assert.equal(state.result.rank, 'success');
 });
 
+test('three wrong reads let the beast escape and cost supplies', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  const startTools = s.party.tools['snare-line'] + s.party.tools['bait-stake'];
+
+  s = applyHeroProbe(s, 'stone');
+  s = applyHeroProbe(s, 'stone');
+  s = applyHeroProbe(s, 'stone');
+
+  assert.equal(s.currentEncounter.target.captureState, 'escaped');
+  assert.equal(canAdvanceEncounter(s), true);
+  assert.deepEqual(s.party.captures, []);
+  assert.match(s.log.join('\n'), /escapes/i);
+  const endTools = s.party.tools['snare-line'] + s.party.tools['bait-stake'];
+  assert.ok(endTools < startTools);
+});
+
+test('sustained pressure frenzies and wounds the leader', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  for (let i = 0; i < 6; i += 1) {
+    s = applyHeroProbe(s, 'iron'); // correct read: never escapes, but pressure keeps climbing
+  }
+
+  assert.ok(s.party.leader.health < 6);
+  assert.match(s.log.join('\n'), /frenz/i);
+});
+
+test('warning bark and burden shelter prevent the pressure tick', () => {
+  const bark = applyCompanionAction(
+    createInitialState({ encounterIds: ['chain-maw'] }),
+    'grave-hound',
+    'warning-bark'
+  );
+  const shelter = applyCompanionAction(
+    createInitialState({ encounterIds: ['chain-maw'] }),
+    'mireback-tortoise',
+    'burden-shelter'
+  );
+
+  assert.equal(bark.currentEncounter.pressure, 0);
+  assert.equal(shelter.currentEncounter.pressure, 0);
+});
+
+test('stalling on a bindable target closes the capture window', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+
+  s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
+  s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
+
+  assert.notEqual(s.currentEncounter.target.captureState, 'bindable');
+  assert.match(s.log.join('\n'), /window clos/i);
+});
+
+test('relentless reckless pressure can lose the leader and fail the expedition', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  let guard = 0;
+  while (!s.expeditionComplete && guard < 40) {
+    s = applyHeroProbe(s, 'iron');
+    guard += 1;
+  }
+
+  assert.equal(s.expeditionComplete, true);
+  assert.equal(s.result.rank, 'expedition-failure');
+});
+
 test('resolved encounters ignore later action dispatches instead of mutating state', () => {
   let state = createInitialState({ encounterIds: ['ashwing-moth'] });
   state = applyHeroProbe(state, 'ash');

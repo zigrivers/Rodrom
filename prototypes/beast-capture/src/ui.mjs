@@ -146,6 +146,7 @@ function describeCaptureState(value) {
     bindable: 'Bindable',
     defeated: 'Defeated',
     captured: 'Captured',
+    escaped: 'Escaped',
   };
 
   return map[value] ?? value;
