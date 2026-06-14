@@ -476,6 +476,20 @@ export function withdrawEncounter(state) {
   );
 }
 
+// Extract or Commit (E2): once a layer is resolved, end the run now and bank the
+// haul (safe), instead of descending deeper into harder layers.
+export function extractExpedition(state) {
+  if (state.expeditionComplete || !canAdvanceEncounter(state)) {
+    return state;
+  }
+  const captures = state.party.captures.length;
+  const rank = captures >= 2 ? 'strong-success' : captures >= 1 ? 'success' : 'partial-failure';
+  return appendLog(
+    completeExpedition(state, rank),
+    `The expedition extracts from layer ${state.currentEncounter.depth} with its haul.`
+  );
+}
+
 export function advanceEncounter(state) {
   if (!canAdvanceEncounter(state)) {
     return appendLog(state, 'The encounter is still active. You cannot advance yet.');

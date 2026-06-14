@@ -100,7 +100,8 @@ export function renderApp(state) {
             .join('')}
           <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
           <button data-action="withdraw" ${renderDisabled(encounterResolved)}>Withdraw</button>
-          <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Advance</button>
+          <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Descend deeper</button>
+          <button data-action="extract" ${renderDisabled(!advanceAllowed)}>Extract (keep haul)</button>
         </div>
       </section>
       <aside class="panel">

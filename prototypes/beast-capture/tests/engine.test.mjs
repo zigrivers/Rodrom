@@ -11,6 +11,7 @@ import {
   applyToolAction,
   attemptCapture,
   canAdvanceEncounter,
+  extractExpedition,
   pressurePerTurn,
   withdrawEncounter,
 } from '../src/engine.mjs';
@@ -372,6 +373,26 @@ test('a staked snare line holds an open capture window from decaying', () => {
   s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
 
   assert.equal(s.currentEncounter.target.captureState, 'bindable');
+});
+
+test('extracting after a resolved layer ends the run and banks the haul', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'storm-antler'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s); // layer 1 resolved, 1 capture
+
+  s = extractExpedition(s);
+
+  assert.equal(s.expeditionComplete, true);
+  assert.equal(s.result.rank, 'success');
+  assert.deepEqual(s.party.captures, ['ashwing-moth']);
+  assert.deepEqual(s.roster, ['ashwing-moth']);
+  assert.match(s.log.at(-1), /extract/i);
+});
+
+test('extract is unavailable until the current layer is resolved', () => {
+  const s = createInitialState({ encounterIds: ['chain-maw'] });
+  assert.equal(extractExpedition(s), s);
 });
 
 test('withdrawing resolves the encounter without a capture and spares the party', () => {
