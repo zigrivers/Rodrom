@@ -88,27 +88,23 @@ function buildPartyBeasts(fielded) {
   return Object.fromEntries(fielded.map(buildBeast).filter(Boolean));
 }
 
-// Passive affinity: a bonded captured beast (bond >= 1) recognises a target of
-// its own attunement, revealing it on arrival (a codex hint). Concealed beasts
-// resist it. Does not auto-probe — you still lock it in with a probe.
+// Veilsight passive (cme.2): a fielded Veil Lynx ally reveals the target's
+// attunement on arrival (even concealed ones) as a codex hint. Does not
+// auto-probe — you still lock it in with a probe.
 export function seedEncounterKnowledge(state) {
+  const hasVeilsight = state.fielded.some((id) => CAPTURED_ALLY[id]?.passive === 'veilsight');
+  if (!hasVeilsight) {
+    return state;
+  }
   const target = state.currentEncounter.target;
-  const def = TARGET_BEASTS[target.id];
-  if (def.concealed) {
+  const current = state.codexHints[target.id] ?? [];
+  if (current.includes(target.primaryAttunement)) {
     return state;
   }
-
-  const hints = new Set(state.codexHints[target.id] ?? []);
-  for (const id of state.fielded) {
-    if (CAPTURED_ALLY[id] && (state.bonds[id] ?? 0) >= 1 && TARGET_BEASTS[id]?.primaryAttunement === target.primaryAttunement) {
-      hints.add(target.primaryAttunement);
-    }
-  }
-
-  if (hints.size === (state.codexHints[target.id] ?? []).length) {
-    return state;
-  }
-  return { ...state, codexHints: { ...state.codexHints, [target.id]: [...hints] } };
+  return {
+    ...state,
+    codexHints: { ...state.codexHints, [target.id]: [...current, target.primaryAttunement] },
+  };
 }
 
 export function createInitialState(options = {}) {
