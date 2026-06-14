@@ -16,6 +16,7 @@ export function renderApp(state) {
         <h3>Party — who do you field?</h3>
         <p>Each beast brings different actions, so your party decides which captures are even possible.</p>
         ${renderPartyPicker(state.fielded, state.roster, state.bonds)}
+        ${renderCoachToggle(state)}
         <button data-action="start-expedition">Start Expedition</button>
       </section>
     `;
@@ -28,6 +29,11 @@ export function renderApp(state) {
         <p>Result: ${state.result.rank}</p>
         <p>Captures this run: ${state.result.captures}</p>
         <p>Lore earned: ${state.result.loreEarned} (town total: ${state.lore})</p>
+        ${
+          state.result.bonusLore > 0
+            ? `<p>Capture bonus: +${state.result.bonusLore} Lore from clean/fast captures${state.result.cleanCaptures > 0 ? ` (${state.result.cleanCaptures} clean — pre-bonded)` : ''}.</p>`
+            : ''
+        }
         ${renderRoster(state.roster)}
         <button data-action="replay">Return to town</button>
         <h3>Learned Clue Summary</h3>
@@ -136,6 +142,17 @@ function renderDisabled(disabled) {
   return disabled ? 'disabled' : '';
 }
 
+// Coach toggle (cme.3): on = step-by-step guidance (teaches); off = oblique
+// "tracker" that reflects only what you've learned, so reading is a skill.
+function renderCoachToggle(state) {
+  const off = state.coach === false;
+  return `
+    <h3>Reading style</h3>
+    <p>Coach: ${off ? 'off — oblique tracker (reads are yours to make)' : 'on — step-by-step guidance'}</p>
+    <button data-action="toggle-coach">${off ? 'Enable coach' : 'Switch to tracker (oblique)'}</button>
+  `;
+}
+
 function renderTownUpgrades(state) {
   const level = state.upgrades.infirmary ?? 0;
   const cost = upgradeCost('infirmary', level);
@@ -235,10 +252,27 @@ function triggerHint(def) {
   }
 }
 
+// Oblique tracker mode (cme.3): reflect only what's been learned, never the
+// prescribed next action, so reading the quarry stays a real skill.
+function obliqueGuidance(state, target) {
+  if (target.captureState === 'bindable') {
+    return 'The opening is there — if you can see it.';
+  }
+  const learned = state.codexHints[target.id] ?? [];
+  if (learned.includes(target.primaryAttunement)) {
+    return `You've learned it answers to ${formatLabel(target.primaryAttunement)}. Drive it from there.`;
+  }
+  return 'Read the quarry yourself — watch what it reacts to and how it holds itself.';
+}
+
 function captureGuidance(state) {
   const enc = state.currentEncounter;
   const target = enc.target;
   const def = TARGET_BEASTS[target.id];
+
+  if (state.coach === false) {
+    return obliqueGuidance(state, target);
+  }
 
   if (target.captureState === 'bindable') {
     return 'Window open — Capture now before it closes.';

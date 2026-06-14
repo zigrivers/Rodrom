@@ -7,6 +7,13 @@ const FRENZY_PRESSURE = 6; // pressure at which an undefended turn wounds the le
 const FRENZY_LEADER_DAMAGE = 1;
 const WINDOW_GRACE = 3; // open-window turns before a bindable beast slips loose
 
+// Capture scoring (cme.3): a capture with no wrong reads is "clean"; a capture
+// bound within FAST_CAPTURE_TURNS is "fast". Each earns bonus Lore, and a clean
+// capture of a new species seeds its bond so reading well makes you stronger.
+const CLEAN_CAPTURE_LORE = 2;
+const FAST_CAPTURE_LORE = 1;
+const FAST_CAPTURE_TURNS = 4;
+
 // Deeper layers press harder: per-turn pressure rises with descent depth, so
 // frenzy and failure scale with depth (run structure, t9i.3).
 export function pressurePerTurn(depth) {
@@ -20,18 +27,38 @@ function appendLog(state, line) {
 // Finish a run: record the result and bank this run's captures into the
 // campaign roster so captured beasts persist across runs.
 function completeExpedition(state, rank) {
-  const bonds = { ...state.bonds };
+  const originalBonds = state.bonds ?? {};
+  const bonds = { ...originalBonds };
   for (const id of state.fielded) {
     if (CAPTURED_ALLY[id]) {
       bonds[id] = (bonds[id] ?? 0) + 1;
     }
   }
+
+  // Score each capture: clean/fast earn bonus Lore; a clean capture of a new
+  // species (no prior bond) arrives pre-bonded (cme.3). Duplicate-capture
+  // payoff is cme.7's job, so we only pre-bond genuinely new species here.
+  const captureLog = state.captureLog ?? [];
+  let bonusLore = 0;
+  for (const grade of captureLog) {
+    if (grade.clean) {
+      bonusLore += CLEAN_CAPTURE_LORE;
+      if (originalBonds[grade.id] === undefined) {
+        bonds[grade.id] = (bonds[grade.id] ?? 0) + 1;
+      }
+    }
+    if (grade.fast) {
+      bonusLore += FAST_CAPTURE_LORE;
+    }
+  }
+
   const captures = state.party.captures.length;
-  const loreEarned = captures * 3 + state.currentEncounter.depth;
+  const cleanCaptures = captureLog.filter((grade) => grade.clean).length;
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore;
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures },
     roster: [...state.roster, ...state.party.captures],
     bonds,
     lore: (state.lore ?? 0) + loreEarned,
@@ -448,27 +475,34 @@ export function attemptCapture(state) {
     return state;
   }
 
-  const target = state.currentEncounter.target;
+  const enc = state.currentEncounter;
+  const target = enc.target;
   if (target.captureState !== 'bindable') {
     return finalizeEncounterAction(state, `${target.name} is not ready to bind.`);
   }
 
+  // Grade the capture (cme.3): no wrong reads is clean; a quick bind is fast.
+  const clean = (enc.escapeProgress ?? 0) === 0;
+  const fast = enc.turn <= FAST_CAPTURE_TURNS;
+  const flourish = clean && fast ? ' — a clean, swift bind.' : clean ? ' — cleanly bound.' : fast ? ' — a swift bind.' : '.';
+
   return finalizeEncounterAction(
     {
       ...state,
+      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast }],
       party: {
         ...state.party,
         captures: [...state.party.captures, target.id],
       },
       currentEncounter: {
-        ...state.currentEncounter,
+        ...enc,
         target: {
           ...target,
           captureState: 'captured',
         },
       },
     },
-    `${target.name} is captured.`
+    `${target.name} is captured${flourish}`
   );
 }
 
