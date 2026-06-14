@@ -11,6 +11,10 @@ export const PLAYER_BEASTS = {
   },
 };
 
+// Each target's capture condition is posture-driven: the player must probe the
+// correct attunement AND drive the beast into its `bindPosture` using the
+// beast-specific `postureTrigger` action. `concealed` beasts read deceptively
+// (the falseLead looks like a hit) until the trigger reveals them.
 export const TARGET_BEASTS = {
   'ashwing-moth': {
     id: 'ashwing-moth',
@@ -18,6 +22,8 @@ export const TARGET_BEASTS = {
     primaryAttunement: 'ash',
     falseLead: 'flame',
     initialPosture: 'skittish',
+    bindPosture: 'cornered',
+    postureTrigger: { type: 'companion', beastId: 'grave-hound', actionId: 'harry' },
     initialCaptureState: 'unreadable',
     maxHealth: 2,
   },
@@ -27,6 +33,8 @@ export const TARGET_BEASTS = {
     primaryAttunement: 'iron',
     falseLead: 'stone',
     initialPosture: 'charging',
+    bindPosture: 'staggered',
+    postureTrigger: { type: 'companion', beastId: 'mireback-tortoise', actionId: 'shove' },
     initialCaptureState: 'unreadable',
     maxHealth: 4,
   },
@@ -36,6 +44,9 @@ export const TARGET_BEASTS = {
     primaryAttunement: 'veil',
     falseLead: 'silence',
     initialPosture: 'hidden',
+    bindPosture: 'revealed',
+    postureTrigger: { type: 'companion', beastId: 'grave-hound', actionId: 'scent-read' },
+    concealed: true,
     initialCaptureState: 'unreadable',
     maxHealth: 3,
   },
@@ -45,6 +56,8 @@ export const TARGET_BEASTS = {
     primaryAttunement: 'storm',
     falseLead: 'light',
     initialPosture: 'braced',
+    bindPosture: 'grounded',
+    postureTrigger: { type: 'tool', toolId: 'bait-stake' },
     initialCaptureState: 'unreadable',
     maxHealth: 5,
   },

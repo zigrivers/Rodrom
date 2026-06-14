@@ -43,11 +43,23 @@ document.addEventListener('click', (event) => {
     case 'tool-bait-stake':
       state = applyToolAction(state, 'bait-stake');
       break;
+    case 'hound-scent-read':
+      state = applyCompanionAction(state, 'grave-hound', 'scent-read');
+      break;
     case 'hound-harry':
       state = applyCompanionAction(state, 'grave-hound', 'harry');
       break;
+    case 'hound-warning-bark':
+      state = applyCompanionAction(state, 'grave-hound', 'warning-bark');
+      break;
     case 'mireback-brace':
       state = applyCompanionAction(state, 'mireback-tortoise', 'brace');
+      break;
+    case 'mireback-shove':
+      state = applyCompanionAction(state, 'mireback-tortoise', 'shove');
+      break;
+    case 'mireback-burden-shelter':
+      state = applyCompanionAction(state, 'mireback-tortoise', 'burden-shelter');
       break;
     case 'capture':
       state = attemptCapture(state);

@@ -13,30 +13,88 @@ import {
   canAdvanceEncounter,
 } from '../src/engine.mjs';
 
-test('the default expedition can capture all three default encounters with browser-visible actions', () => {
+test('the default expedition captures all three encounters via their distinct conditions', () => {
   let state = createInitialState();
 
+  // Ashwing Moth: correct attunement + Harry corners it
   state = applyHeroProbe(state, 'ash');
-  state = applyToolAction(state, 'snare-line');
   state = applyCompanionAction(state, 'grave-hound', 'harry');
   state = attemptCapture(state);
   state = advanceEncounter(state);
 
+  // Chain Maw: correct attunement + Shove staggers it (Harry alone will not do)
   state = applyHeroProbe(state, 'iron');
-  state = applyToolAction(state, 'bait-stake');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = applyCompanionAction(state, 'mireback-tortoise', 'shove');
   state = attemptCapture(state);
   state = advanceEncounter(state);
 
+  // Storm Antler: correct attunement + Bait Stake grounds its charge
   state = applyHeroProbe(state, 'storm');
-  state = applyToolAction(state, 'snare-line');
-  state = applyCompanionAction(state, 'grave-hound', 'harry');
+  state = applyToolAction(state, 'bait-stake');
   state = attemptCapture(state);
   state = advanceEncounter(state);
 
   assert.equal(state.expeditionComplete, true);
   assert.equal(state.result.rank, 'strong-success');
   assert.deepEqual(state.party.captures, ['ashwing-moth', 'chain-maw', 'storm-antler']);
+});
+
+test('each beast requires its own control action to become bindable', () => {
+  // Chain Maw cannot be bound by Harry; it needs Shove
+  let chain = createInitialState({ encounterIds: ['chain-maw'] });
+  chain = applyHeroProbe(chain, 'iron');
+  chain = applyCompanionAction(chain, 'grave-hound', 'harry');
+  assert.notEqual(chain.currentEncounter.target.captureState, 'bindable');
+  chain = applyCompanionAction(chain, 'mireback-tortoise', 'shove');
+  assert.equal(chain.currentEncounter.target.captureState, 'bindable');
+
+  // Storm Antler needs Bait Stake, not a Snare Line
+  let storm = createInitialState({ encounterIds: ['storm-antler'] });
+  storm = applyHeroProbe(storm, 'storm');
+  storm = applyToolAction(storm, 'snare-line');
+  assert.notEqual(storm.currentEncounter.target.captureState, 'bindable');
+  storm = applyToolAction(storm, 'bait-stake');
+  assert.equal(storm.currentEncounter.target.captureState, 'bindable');
+});
+
+test('a beast-specific control action drives the target into its bind posture', () => {
+  let chain = createInitialState({ encounterIds: ['chain-maw'] });
+  assert.equal(chain.currentEncounter.target.posture, 'charging');
+  chain = applyCompanionAction(chain, 'mireback-tortoise', 'shove');
+  assert.equal(chain.currentEncounter.target.posture, 'staggered');
+});
+
+test('correct attunement alone is not enough without the bind posture', () => {
+  let chain = createInitialState({ encounterIds: ['chain-maw'] });
+  chain = applyHeroProbe(chain, 'iron');
+  assert.equal(chain.currentEncounter.target.captureState, 'probed');
+  assert.notEqual(chain.currentEncounter.target.captureState, 'bindable');
+});
+
+test('veil lynx conceals its attunement until scent-read reveals it', () => {
+  let s = createInitialState({ encounterIds: ['veil-lynx'] });
+
+  // Probing the true attunement while hidden is misleading and makes no progress
+  s = applyHeroProbe(s, 'veil');
+  assert.match(s.log.at(-2), /rejects/i);
+  assert.notEqual(s.currentEncounter.target.captureState, 'bindable');
+
+  // The false lead reads as a (misleading) reaction but never matches
+  let f = createInitialState({ encounterIds: ['veil-lynx'] });
+  f = applyHeroProbe(f, 'silence');
+  assert.match(f.log.at(-2), /reacts/i);
+  assert.notEqual(f.currentEncounter.target.captureState, 'bindable');
+
+  // Scent Read reveals the true attunement and exposes the lynx
+  s = applyCompanionAction(s, 'grave-hound', 'scent-read');
+  assert.equal(s.currentEncounter.target.posture, 'revealed');
+  assert.ok(s.codexHints['veil-lynx']?.includes('veil'));
+
+  // Now the true attunement reads correctly and capture opens
+  s = applyHeroProbe(s, 'veil');
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+  s = attemptCapture(s);
+  assert.deepEqual(s.party.captures, ['veil-lynx']);
 });
 
 test('advance is blocked until the current encounter is captured or defeated', () => {

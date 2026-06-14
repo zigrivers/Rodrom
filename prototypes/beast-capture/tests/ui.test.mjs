@@ -25,6 +25,17 @@ test('renderApp exposes the browser-visible probes, tools, and beast actions for
   assert.doesNotMatch(html, /Salt Marker/);
 });
 
+test('renderApp exposes the full grave-hound and mireback action sets', () => {
+  const html = renderApp(createInitialState());
+
+  assert.match(html, /Grave Hound: Scent Read/);
+  assert.match(html, /Grave Hound: Harry/);
+  assert.match(html, /Grave Hound: Warning Bark/);
+  assert.match(html, /Mireback: Brace/);
+  assert.match(html, /Mireback: Shove/);
+  assert.match(html, /Mireback: Burden Shelter/);
+});
+
 test('renderApp disables advance until the encounter is resolved', () => {
   const unresolved = renderApp(createInitialState({ encounterIds: ['ashwing-moth'] }));
   assert.match(unresolved, /data-action="advance"[^>]*disabled/);

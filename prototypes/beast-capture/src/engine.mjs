@@ -1,11 +1,19 @@
 import { createTargetState } from './state.mjs';
+import { TARGET_BEASTS } from './content.mjs';
 
 function appendLog(state, line) {
   return { ...state, log: [...state.log, line] };
 }
 
-function hasPostureSetup(structures) {
-  return structures.includes('snare-line') || structures.includes('bait-stake');
+function beastDef(target) {
+  return TARGET_BEASTS[target.id];
+}
+
+function addHint(codexHints, targetId, attunement) {
+  return {
+    ...codexHints,
+    [targetId]: [...new Set([...(codexHints[targetId] ?? []), attunement])],
+  };
 }
 
 function isTerminalCaptureState(value) {
@@ -22,6 +30,40 @@ export function canAdvanceEncounter(state) {
 
 function isResolvedEncounter(state) {
   return canAdvanceEncounter(state);
+}
+
+// A concealed beast reads deceptively until its trigger drives it to bindPosture.
+function isConcealedNow(target) {
+  const def = beastDef(target);
+  return Boolean(def.concealed) && target.posture !== def.bindPosture;
+}
+
+// Returns { matched, reacts }. `matched` means a true positive read that
+// progresses capture; `reacts` controls the "reacts"/"rejects" log wording.
+function evaluateProbe(target, attunement) {
+  const def = beastDef(target);
+  if (isConcealedNow(target)) {
+    return { matched: false, reacts: attunement === def.falseLead };
+  }
+  const matched = attunement === target.primaryAttunement;
+  return { matched, reacts: matched };
+}
+
+// Capture state is derived from the two requirements, never set imperatively
+// (except terminal states), so a reached window can't be silently downgraded.
+function deriveCaptureState(target, flags) {
+  if (isTerminalCaptureState(target.captureState)) {
+    return target.captureState;
+  }
+  const def = beastDef(target);
+  const postureReady = target.posture === def.bindPosture;
+  if (flags.attunementMatch && postureReady) {
+    return 'bindable';
+  }
+  if (flags.attunementMatch || postureReady) {
+    return 'probed';
+  }
+  return 'unreadable';
 }
 
 function consumeDefenseFlags(flags) {
@@ -79,31 +121,24 @@ export function applyHeroProbe(state, attunement) {
     return state;
   }
 
-  const target = state.currentEncounter.target;
-  const matched = attunement === target.primaryAttunement;
+  const enc = state.currentEncounter;
+  const target = enc.target;
+  const { matched, reacts } = evaluateProbe(target, attunement);
+
+  const flags = {
+    ...enc.flags,
+    attunementMatch: enc.flags.attunementMatch || matched,
+  };
+  const updatedTarget = { ...target };
+  updatedTarget.captureState = deriveCaptureState(updatedTarget, flags);
 
   return finalizeEncounterAction(
     {
       ...state,
-      codexHints: matched
-        ? {
-            ...state.codexHints,
-            [target.id]: [...new Set([...(state.codexHints[target.id] ?? []), attunement])],
-          }
-        : state.codexHints,
-      currentEncounter: {
-        ...state.currentEncounter,
-        target: {
-          ...target,
-          captureState: matched && target.captureState === 'unreadable' ? 'probed' : target.captureState,
-        },
-        flags: {
-          ...state.currentEncounter.flags,
-          attunementMatch: state.currentEncounter.flags.attunementMatch || matched,
-        },
-      },
+      codexHints: matched ? addHint(state.codexHints, target.id, attunement) : state.codexHints,
+      currentEncounter: { ...enc, target: updatedTarget, flags },
     },
-    matched ? `${target.name} reacts to ${attunement}.` : `${target.name} rejects the ${attunement} probe.`
+    reacts ? `${target.name} reacts to ${attunement}.` : `${target.name} rejects the ${attunement} probe.`
   );
 }
 
@@ -112,33 +147,36 @@ export function applyToolAction(state, toolId) {
     return state;
   }
 
+  const enc = state.currentEncounter;
   const remaining = state.party.tools[toolId];
   if (!remaining) {
     return finalizeEncounterAction(state, `${toolId} is exhausted.`);
   }
 
-  const structures = [...state.currentEncounter.structures, toolId];
+  const target = enc.target;
+  const def = beastDef(target);
+  const triggersPosture = def.postureTrigger.type === 'tool' && def.postureTrigger.toolId === toolId;
+
+  const updatedTarget = { ...target };
+  if (triggersPosture) {
+    updatedTarget.posture = def.bindPosture;
+  }
+  updatedTarget.captureState = deriveCaptureState(updatedTarget, enc.flags);
 
   return finalizeEncounterAction(
     {
       ...state,
       party: {
         ...state.party,
-        tools: {
-          ...state.party.tools,
-          [toolId]: remaining - 1,
-        },
+        tools: { ...state.party.tools, [toolId]: remaining - 1 },
       },
       currentEncounter: {
-        ...state.currentEncounter,
-        structures,
-        flags: {
-          ...state.currentEncounter.flags,
-          postureReady: state.currentEncounter.flags.postureReady || hasPostureSetup(structures),
-        },
+        ...enc,
+        structures: [...enc.structures, toolId],
+        target: updatedTarget,
       },
     },
-    `Placed ${toolId}.`
+    triggersPosture ? `Placed ${toolId}; ${target.name} is ${def.bindPosture}.` : `Placed ${toolId}.`
   );
 }
 
@@ -147,58 +185,60 @@ export function applyCompanionAction(state, beastId, actionId) {
     return state;
   }
 
+  const enc = state.currentEncounter;
   const beast = state.party.beasts[beastId];
-  const target = state.currentEncounter.target;
+  const target = enc.target;
+  const def = beastDef(target);
 
-  const nextState = {
-    ...state,
-    party: {
-      ...state.party,
-      beasts: {
-        ...state.party.beasts,
-        [beastId]: {
-          ...beast,
-          fatigue: beast.fatigue + 1,
+  const triggersPosture =
+    def.postureTrigger.type === 'companion' &&
+    def.postureTrigger.beastId === beastId &&
+    def.postureTrigger.actionId === actionId;
+
+  const updatedTarget = { ...target };
+  let flags = { ...enc.flags };
+  let codexHints = state.codexHints;
+  let line = `${beast.name} uses ${actionId}.`;
+
+  if (triggersPosture) {
+    updatedTarget.posture = def.bindPosture;
+  }
+
+  if (beastId === 'grave-hound' && actionId === 'scent-read') {
+    codexHints = addHint(codexHints, target.id, target.primaryAttunement);
+    line = triggersPosture
+      ? `${beast.name} scents ${target.name}: it responds to ${target.primaryAttunement}, and slips into the open.`
+      : `${beast.name} scents ${target.name}: it responds to ${target.primaryAttunement}.`;
+  } else if (triggersPosture) {
+    line = `${beast.name} forces ${target.name} ${actionId === 'harry' ? 'into a corner' : 'off balance'}; it is ${def.bindPosture}.`;
+  } else if (beastId === 'grave-hound' && actionId === 'warning-bark') {
+    flags.guardRaised = true;
+    line = `${beast.name} barks a warning; the expedition steadies.`;
+  } else if (beastId === 'mireback-tortoise' && actionId === 'brace') {
+    flags.braceRaised = true;
+    line = `${beast.name} braces the line.`;
+  } else if (beastId === 'mireback-tortoise' && actionId === 'burden-shelter') {
+    flags.braceRaised = true;
+    line = `${beast.name} shelters the supplies and steadies the line.`;
+  }
+
+  updatedTarget.captureState = deriveCaptureState(updatedTarget, flags);
+
+  return finalizeEncounterAction(
+    {
+      ...state,
+      codexHints,
+      party: {
+        ...state.party,
+        beasts: {
+          ...state.party.beasts,
+          [beastId]: { ...beast, fatigue: beast.fatigue + 1 },
         },
       },
+      currentEncounter: { ...enc, target: updatedTarget, flags },
     },
-  };
-
-  if (beastId === 'grave-hound' && actionId === 'harry') {
-    const bindable = state.currentEncounter.flags.attunementMatch && state.currentEncounter.flags.postureReady;
-
-    return finalizeEncounterAction(
-      {
-        ...nextState,
-        currentEncounter: {
-          ...state.currentEncounter,
-          target: {
-            ...target,
-            captureState: bindable && !isTerminalCaptureState(target.captureState) ? 'bindable' : target.captureState,
-          },
-        },
-      },
-      `${beast.name} harries ${target.name}.`
-    );
-  }
-
-  if (beastId === 'mireback-tortoise' && actionId === 'brace') {
-    return finalizeEncounterAction(
-      {
-        ...nextState,
-        currentEncounter: {
-          ...state.currentEncounter,
-          flags: {
-            ...state.currentEncounter.flags,
-            braceRaised: true,
-          },
-        },
-      },
-      `${beast.name} braces the line.`
-    );
-  }
-
-  return finalizeEncounterAction(nextState, `${beast.name} uses ${actionId}.`);
+    line
+  );
 }
 
 export function applyStrikeAction(state) {
@@ -311,7 +351,6 @@ export function advanceEncounter(state) {
         structures: [],
         flags: {
           attunementMatch: false,
-          postureReady: false,
           guardRaised: false,
           braceRaised: false,
           alerted: carryoverPressure > 0,

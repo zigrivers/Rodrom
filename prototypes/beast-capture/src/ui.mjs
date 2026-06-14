@@ -55,8 +55,12 @@ export function renderApp(state) {
           >
             Bait Stake
           </button>
+          <button data-action="hound-scent-read" ${renderDisabled(encounterResolved)}>Grave Hound: Scent Read</button>
           <button data-action="hound-harry" ${renderDisabled(encounterResolved)}>Grave Hound: Harry</button>
+          <button data-action="hound-warning-bark" ${renderDisabled(encounterResolved)}>Grave Hound: Warning Bark</button>
           <button data-action="mireback-brace" ${renderDisabled(encounterResolved)}>Mireback: Brace</button>
+          <button data-action="mireback-shove" ${renderDisabled(encounterResolved)}>Mireback: Shove</button>
+          <button data-action="mireback-burden-shelter" ${renderDisabled(encounterResolved)}>Mireback: Burden Shelter</button>
           <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
           <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Advance</button>
         </div>

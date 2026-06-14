@@ -46,7 +46,6 @@ export function createInitialState(options = {}) {
       structures: [],
       flags: {
         attunementMatch: false,
-        postureReady: false,
         guardRaised: false,
         braceRaised: false,
         alerted: false,
