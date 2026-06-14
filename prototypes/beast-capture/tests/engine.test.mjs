@@ -130,6 +130,29 @@ test('the roster carries across runs and accumulates new captures', () => {
   assert.deepEqual(s.roster, ['chain-maw', 'ashwing-moth']);
 });
 
+test('fielding a subset of beasts omits the unfielded ones from the party', () => {
+  const s = createInitialState({ fielded: ['mireback-tortoise'] });
+  assert.deepEqual(Object.keys(s.party.beasts), ['mireback-tortoise']);
+  assert.deepEqual(s.fielded, ['mireback-tortoise']);
+});
+
+test('an unfielded beast action is a no-op', () => {
+  const s = createInitialState({ fielded: ['mireback-tortoise'], encounterIds: ['chain-maw'] });
+  assert.equal(applyCompanionAction(s, 'grave-hound', 'harry'), s);
+});
+
+test('composition changes outcomes: only a fielded Mireback can stagger the Chain Maw', () => {
+  let withMireback = createInitialState({ fielded: ['mireback-tortoise'], encounterIds: ['chain-maw'] });
+  withMireback = applyHeroProbe(withMireback, 'iron');
+  withMireback = applyCompanionAction(withMireback, 'mireback-tortoise', 'shove');
+  assert.equal(withMireback.currentEncounter.target.captureState, 'bindable');
+
+  let withoutMireback = createInitialState({ fielded: ['grave-hound'], encounterIds: ['chain-maw'] });
+  withoutMireback = applyHeroProbe(withoutMireback, 'iron');
+  withoutMireback = applyCompanionAction(withoutMireback, 'mireback-tortoise', 'shove'); // not fielded -> no-op
+  assert.notEqual(withoutMireback.currentEncounter.target.captureState, 'bindable');
+});
+
 test('a new run preserves the prior roster and starts with no run captures', () => {
   const s = createInitialState({ roster: ['ashwing-moth', 'chain-maw'], started: true });
 

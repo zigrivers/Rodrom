@@ -32,6 +32,18 @@ test('renderApp shows a start screen before the expedition begins', () => {
   assert.doesNotMatch(html, /data-action="probe-ash"/);
 });
 
+test('the start screen lets you select which beasts to field', () => {
+  const html = renderApp(createInitialState({ started: false }));
+  assert.match(html, /data-action="toggle-grave-hound"/);
+  assert.match(html, /data-action="toggle-mireback-tortoise"/);
+});
+
+test('unfielded beasts get no action buttons in an encounter', () => {
+  const html = renderApp(createInitialState({ fielded: ['mireback-tortoise'], encounterIds: ['chain-maw'] }));
+  assert.doesNotMatch(html, /Grave Hound: Harry/);
+  assert.match(html, /Mireback: Shove/);
+});
+
 test('the start screen shows the carried-over roster', () => {
   const html = renderApp(createInitialState({ started: false, roster: ['ashwing-moth'] }));
   assert.match(html, /Roster/);

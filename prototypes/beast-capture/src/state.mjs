@@ -24,13 +24,34 @@ export function buildEncounterOrder(variant = 0) {
   return ['ashwing-moth', ...chosen];
 }
 
+// Allied beasts the player can choose to field, with their per-beast health.
+const FIELDABLE = ['grave-hound', 'mireback-tortoise'];
+const BEAST_STATS = {
+  'grave-hound': { health: 4 },
+  'mireback-tortoise': { health: 6 },
+};
+
+function buildPartyBeasts(fielded) {
+  return Object.fromEntries(
+    fielded
+      .filter((id) => PLAYER_BEASTS[id])
+      .map((id) => {
+        const health = BEAST_STATS[id]?.health ?? 4;
+        return [id, { ...PLAYER_BEASTS[id], fatigue: 0, health, maxHealth: health }];
+      })
+  );
+}
+
 export function createInitialState(options = {}) {
   const encounterIds = options.encounterIds ?? ['ashwing-moth', 'chain-maw', 'storm-antler'];
+  const fielded = options.fielded ?? [...FIELDABLE];
 
   return {
     started: options.started ?? true,
     // Campaign-level roster of captured beasts, carried across runs.
     roster: options.roster ?? [],
+    // Which allied beasts are fielded this run (party composition).
+    fielded,
     encounterIds,
     encounterIndex: 0,
     log: ['Expedition begins.'],
@@ -39,15 +60,7 @@ export function createInitialState(options = {}) {
     result: null,
     party: {
       leader: { health: 6, maxHealth: 6 },
-      beasts: {
-        'grave-hound': { ...PLAYER_BEASTS['grave-hound'], fatigue: 0, health: 4, maxHealth: 4 },
-        'mireback-tortoise': {
-          ...PLAYER_BEASTS['mireback-tortoise'],
-          fatigue: 0,
-          health: 6,
-          maxHealth: 6,
-        },
-      },
+      beasts: buildPartyBeasts(fielded),
       tools: Object.fromEntries(Object.values(TOOLS).map((tool) => [tool.id, tool.uses])),
       captures: [],
     },
