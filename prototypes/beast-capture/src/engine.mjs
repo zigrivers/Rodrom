@@ -20,6 +20,13 @@ export function pressurePerTurn(depth) {
   return 1 + Math.floor(((depth ?? 1) - 1) / 2);
 }
 
+// Depth ambush (cme.5): deeper layers begin already under pressure, so the
+// frenzy clock is ticking from the first breath and a quick, clean capture
+// (or active defense / an Anchor) is the only safe line at depth.
+export function startingPressure(depth) {
+  return Math.floor(((depth ?? 1) - 1) / 2);
+}
+
 function appendLog(state, line) {
   return { ...state, log: [...state.log, line] };
 }
@@ -613,7 +620,7 @@ export function advanceEncounter(state) {
       depth,
       anchored: false,
       turn: 1,
-      pressure: 0,
+      pressure: startingPressure(depth),
       riskLevel: carryoverPressure,
       escapeProgress: 0,
       windowDecay: 0,
@@ -631,5 +638,12 @@ export function advanceEncounter(state) {
     },
   });
 
-  return appendLog(advanced, `The expedition descends to layer ${depth}.`);
+  let descended = appendLog(advanced, `The expedition descends to layer ${depth}.`);
+  if (startingPressure(depth) > 0) {
+    descended = appendLog(
+      descended,
+      'The deep presses from the first breath — the quarry is already restless.'
+    );
+  }
+  return descended;
 }

@@ -15,6 +15,7 @@ import {
   canAdvanceEncounter,
   extractExpedition,
   pressurePerTurn,
+  startingPressure,
   withdrawEncounter,
 } from '../src/engine.mjs';
 import { createTargetState } from '../src/state.mjs';
@@ -683,4 +684,33 @@ test('buying the Quartermaster service spends lore and stocks more tools', () =>
   assert.equal(after.upgrades.quartermaster, 1);
   assert.equal(after.lore, 20 - upgradeCost('quartermaster', 0));
   assert.equal(after.party.tools['snare-line'], 3);
+});
+
+// cme.5 — depth-scaled threats: deeper layers begin under pressure (a depth
+// ambush), so the frenzy clock fires and HP/Anchors/Infirmary actually matter.
+test('deeper layers carry a higher starting pressure (depth ambush)', () => {
+  assert.equal(startingPressure(1), 0);
+  assert.equal(startingPressure(2), 0);
+  assert.equal(startingPressure(3), 1);
+  assert.equal(startingPressure(5), 2);
+});
+
+test('descending into a deeper layer starts it already under pressure', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'storm-antler'] });
+  // layer 1 (depth 1) begins calm
+  assert.equal(s.currentEncounter.pressure, 0);
+
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = advanceEncounter(s); // depth 2
+
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+  s = advanceEncounter(s); // depth 3
+
+  assert.equal(s.currentEncounter.depth, 3);
+  assert.equal(s.currentEncounter.pressure, startingPressure(3));
+  assert.ok(s.currentEncounter.pressure > 0);
 });
