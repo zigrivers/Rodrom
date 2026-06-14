@@ -1,6 +1,6 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.js';
 import { canAdvanceEncounter, tensionLabel } from './engine.js';
-import { upgradeCost } from './state.js';
+import { upgradeCost, UPGRADES } from './state.js';
 
 export function renderApp(state) {
   if (!state.started) {
@@ -154,13 +154,17 @@ function renderCoachToggle(state) {
 }
 
 function renderTownUpgrades(state) {
-  const level = state.upgrades.infirmary ?? 0;
-  const cost = upgradeCost('infirmary', level);
-  const affordable = state.lore >= cost;
-  return `
-    <p>Infirmary — level ${level} (Leader max HP ${6 + level})</p>
-    <button data-action="buy-infirmary" ${affordable ? '' : 'disabled'}>Upgrade Infirmary: +1 Leader HP (${cost} lore)</button>
-  `;
+  return Object.entries(UPGRADES)
+    .map(([key, def]) => {
+      const level = state.upgrades[key] ?? 0;
+      const cost = upgradeCost(key, level);
+      const affordable = state.lore >= cost;
+      return `
+        <p>${def.name} — level ${level} (${def.describe})</p>
+        <button data-action="buy-${key}" ${affordable ? '' : 'disabled'}>Upgrade ${def.name} (${cost} lore)</button>
+      `;
+    })
+    .join('');
 }
 
 function renderPartyPicker(fielded, roster, bonds = {}) {

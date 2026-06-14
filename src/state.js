@@ -37,6 +37,8 @@ const LEADER_BASE_HP = 6;
 // relevant (e.g. infirmary raises the leader's max HP in createInitialState).
 export const UPGRADES = {
   infirmary: { name: 'Infirmary', describe: '+1 Leader max HP' },
+  quartermaster: { name: 'Quartermaster', describe: '+1 use of each field tool per run' },
+  'scouts-lantern': { name: "Scout's Lantern", describe: "Begin each run knowing the next quarries' attunements" },
 };
 
 export function upgradeCost(key, level) {
@@ -114,6 +116,24 @@ export function createInitialState(options = {}) {
   const upgrades = options.upgrades ?? {};
   const leaderMaxHealth = LEADER_BASE_HP + (upgrades.infirmary ?? 0);
 
+  // Quartermaster (cme.4): +1 use of each field tool per level.
+  const quartermaster = upgrades.quartermaster ?? 0;
+  const tools = Object.fromEntries(Object.values(TOOLS).map((tool) => [tool.id, tool.uses]));
+  tools['snare-line'] += quartermaster;
+  tools['bait-stake'] += quartermaster;
+
+  // Scout's Lantern (cme.4): pre-reveal the first `level` quarries' attunements
+  // as codex hints at run start (information sink; you still probe to lock in).
+  const lantern = upgrades['scouts-lantern'] ?? 0;
+  const codexHints = {};
+  for (let i = 0; i < Math.min(lantern, encounterIds.length); i += 1) {
+    const id = encounterIds[i];
+    const attunement = TARGET_BEASTS[id]?.primaryAttunement;
+    if (attunement) {
+      codexHints[id] = [attunement];
+    }
+  }
+
   const base = {
     started: options.started ?? true,
     // Coaching guidance is on by default (teaches new players); turning it off
@@ -133,13 +153,13 @@ export function createInitialState(options = {}) {
     encounterIds,
     encounterIndex: 0,
     log: ['Expedition begins.'],
-    codexHints: {},
+    codexHints,
     expeditionComplete: false,
     result: null,
     party: {
       leader: { health: leaderMaxHealth, maxHealth: leaderMaxHealth },
       beasts: buildPartyBeasts(fielded),
-      tools: Object.fromEntries(Object.values(TOOLS).map((tool) => [tool.id, tool.uses])),
+      tools,
       captures: [],
     },
     currentEncounter: {
