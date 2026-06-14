@@ -7,6 +7,7 @@ import {
   applyCompanionAction,
   attemptCapture,
   withdrawEncounter,
+  anchorExpedition,
   advanceEncounter,
   extractExpedition,
 } from './engine.js';
@@ -109,6 +110,9 @@ document.addEventListener('click', (event) => {
       break;
     case 'withdraw':
       state = withdrawEncounter(state);
+      break;
+    case 'anchor':
+      state = anchorExpedition(state);
       break;
     case 'advance':
       state = advanceEncounter(state);

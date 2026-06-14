@@ -108,6 +108,7 @@ export function createInitialState(options = {}) {
     currentEncounter: {
       target: createTargetState(encounterIds[0], 1),
       depth: 1,
+      anchored: false,
       turn: 1,
       pressure: 0,
       riskLevel: 0,

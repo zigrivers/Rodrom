@@ -476,6 +476,41 @@ export function withdrawEncounter(state) {
   );
 }
 
+// Anchor recovery thins with depth so anchors are never a full reset (z4y.4).
+export function anchorHeal(depth) {
+  return Math.max(1, 4 - (depth ?? 1));
+}
+
+// Anchors (E3): a recovery checkpoint between layers. Once a layer is resolved,
+// the expedition can anchor to heal the leader and shed beast fatigue before
+// deciding to descend or extract. Available once per layer.
+export function anchorExpedition(state) {
+  if (state.expeditionComplete || !canAdvanceEncounter(state) || state.currentEncounter.anchored) {
+    return state;
+  }
+
+  const heal = anchorHeal(state.currentEncounter.depth);
+  const leader = {
+    ...state.party.leader,
+    health: Math.min(state.party.leader.maxHealth, state.party.leader.health + heal),
+  };
+  const beasts = Object.fromEntries(
+    Object.entries(state.party.beasts).map(([id, beast]) => [
+      id,
+      { ...beast, fatigue: Math.max(0, beast.fatigue - 2) },
+    ])
+  );
+
+  return appendLog(
+    {
+      ...state,
+      party: { ...state.party, leader, beasts },
+      currentEncounter: { ...state.currentEncounter, anchored: true },
+    },
+    `The expedition anchors at layer ${state.currentEncounter.depth}: it heals and steadies (recovery thins deeper down).`
+  );
+}
+
 // Extract or Commit (E2): once a layer is resolved, end the run now and bank the
 // haul (safe), instead of descending deeper into harder layers.
 export function extractExpedition(state) {
@@ -530,6 +565,7 @@ export function advanceEncounter(state) {
     currentEncounter: {
       target: createTargetState(state.encounterIds[nextIndex], nextIndex + 1),
       depth: nextIndex + 1,
+      anchored: false,
       turn: 1,
       pressure: 0,
       riskLevel: carryoverPressure,
