@@ -109,6 +109,34 @@ test('run variation builds different encounter orders, always tutorial-first and
   assert.ok(everShowsVeil);
 });
 
+test('completing an expedition banks its captures into the roster', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = advanceEncounter(s);
+
+  assert.equal(s.expeditionComplete, true);
+  assert.deepEqual(s.roster, ['ashwing-moth']);
+});
+
+test('the roster carries across runs and accumulates new captures', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], roster: ['chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = advanceEncounter(s);
+
+  assert.deepEqual(s.roster, ['chain-maw', 'ashwing-moth']);
+});
+
+test('a new run preserves the prior roster and starts with no run captures', () => {
+  const s = createInitialState({ roster: ['ashwing-moth', 'chain-maw'], started: true });
+
+  assert.deepEqual(s.roster, ['ashwing-moth', 'chain-maw']);
+  assert.deepEqual(s.party.captures, []);
+});
+
 test('advance is blocked until the current encounter is captured or defeated', () => {
   const state = createInitialState();
   const nextState = advanceEncounter(state);

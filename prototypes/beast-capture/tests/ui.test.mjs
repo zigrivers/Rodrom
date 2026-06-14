@@ -32,6 +32,25 @@ test('renderApp shows a start screen before the expedition begins', () => {
   assert.doesNotMatch(html, /data-action="probe-ash"/);
 });
 
+test('the start screen shows the carried-over roster', () => {
+  const html = renderApp(createInitialState({ started: false, roster: ['ashwing-moth'] }));
+  assert.match(html, /Roster/);
+  assert.match(html, /Ashwing Moth/);
+});
+
+test('the result screen shows the persistent roster including prior captures', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], roster: ['chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = advanceEncounter(s);
+
+  const html = renderApp(s);
+  assert.match(html, /Roster/);
+  assert.match(html, /Chain Maw/);
+  assert.match(html, /Ashwing Moth/);
+});
+
 test('the encounter view coaches the player toward the capture path', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth'] });
   assert.match(renderApp(s), /Learn what Ashwing Moth responds to/i);

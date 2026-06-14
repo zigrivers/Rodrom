@@ -8,6 +8,7 @@ export function renderApp(state) {
         <h1>Beast Capture Prototype</h1>
         <p>Lead a short expedition into the spiral. Read each beast, drive it into a
         bindable posture, and capture it — or kill it, or withdraw before it costs you.</p>
+        ${renderRoster(state.roster)}
         <button data-action="start-expedition">Start Expedition</button>
       </section>
     `;
@@ -18,7 +19,8 @@ export function renderApp(state) {
       <section class="panel">
         <h1>Expedition Complete</h1>
         <p>Result: ${state.result.rank}</p>
-        <p>Captures: ${state.result.captures}</p>
+        <p>Captures this run: ${state.result.captures}</p>
+        ${renderRoster(state.roster)}
         <button data-action="replay">Run Again</button>
         <h3>Learned Clue Summary</h3>
         ${renderClueSummary(state.codexHints)}
@@ -103,6 +105,14 @@ export function renderApp(state) {
 
 function renderDisabled(disabled) {
   return disabled ? 'disabled' : '';
+}
+
+function renderRoster(roster) {
+  if (!roster || roster.length === 0) {
+    return '<p>Roster: empty — capture beasts to grow it.</p>';
+  }
+  const names = roster.map((id) => TARGET_BEASTS[id]?.name ?? id).join(', ');
+  return `<p>Roster (${roster.length}): ${names}</p>`;
 }
 
 function renderCaptureNames(captures) {

@@ -11,12 +11,34 @@ import {
 } from './engine.mjs';
 import { renderApp } from './ui.mjs';
 
-let state = createInitialState({ started: false });
+const ROSTER_KEY = 'spiral-descent-roster';
+
+function loadRoster() {
+  try {
+    return JSON.parse(localStorage.getItem(ROSTER_KEY)) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRoster(roster) {
+  try {
+    localStorage.setItem(ROSTER_KEY, JSON.stringify(roster ?? []));
+  } catch {
+    // ignore storage errors (private mode, quota, etc.)
+  }
+}
+
+let state = createInitialState({ started: false, roster: loadRoster() });
 const app = document.querySelector('#app');
 
 function startExpedition() {
   const variant = Math.floor(Math.random() * 3);
-  return createInitialState({ started: true, encounterIds: buildEncounterOrder(variant) });
+  return createInitialState({
+    started: true,
+    encounterIds: buildEncounterOrder(variant),
+    roster: state.roster,
+  });
 }
 
 function rerender() {
@@ -83,12 +105,13 @@ document.addEventListener('click', (event) => {
       state = advanceEncounter(state);
       break;
     case 'replay':
-      state = createInitialState({ started: false });
+      state = createInitialState({ started: false, roster: state.roster });
       break;
     default:
       break;
   }
 
+  saveRoster(state.roster);
   rerender();
 });
 
