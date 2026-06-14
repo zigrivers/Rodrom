@@ -1,4 +1,4 @@
-import { createInitialState, buildEncounterOrder } from './state.js';
+import { createInitialState, buildEncounterOrder, buyUpgrade } from './state.js';
 import {
   applyHeroProbe,
   applyGuardAction,
@@ -15,6 +15,8 @@ import { renderApp } from './ui.js';
 
 const ROSTER_KEY = 'spiral-descent-roster';
 const BONDS_KEY = 'spiral-descent-bonds';
+const LORE_KEY = 'spiral-descent-lore';
+const UPGRADES_KEY = 'spiral-descent-upgrades';
 
 function loadJSON(key, fallback) {
   try {
@@ -28,16 +30,21 @@ function saveCampaign(s) {
   try {
     localStorage.setItem(ROSTER_KEY, JSON.stringify(s.roster ?? []));
     localStorage.setItem(BONDS_KEY, JSON.stringify(s.bonds ?? {}));
+    localStorage.setItem(LORE_KEY, JSON.stringify(s.lore ?? 0));
+    localStorage.setItem(UPGRADES_KEY, JSON.stringify(s.upgrades ?? {}));
   } catch {
     // ignore storage errors (private mode, quota, etc.)
   }
 }
 
-let state = createInitialState({
-  started: false,
+const campaign = {
   roster: loadJSON(ROSTER_KEY, []),
   bonds: loadJSON(BONDS_KEY, {}),
-});
+  lore: loadJSON(LORE_KEY, 0),
+  upgrades: loadJSON(UPGRADES_KEY, {}),
+};
+
+let state = createInitialState({ started: false, ...campaign });
 const app = document.querySelector('#app');
 
 function startExpedition() {
@@ -47,6 +54,8 @@ function startExpedition() {
     encounterIds: buildEncounterOrder(variant),
     roster: state.roster,
     bonds: state.bonds,
+    lore: state.lore,
+    upgrades: state.upgrades,
     fielded: state.fielded,
   });
 }
@@ -121,10 +130,19 @@ document.addEventListener('click', (event) => {
       state = extractExpedition(state);
       break;
     case 'replay':
-      state = createInitialState({ started: false, roster: state.roster, bonds: state.bonds });
+      state = createInitialState({
+        started: false,
+        roster: state.roster,
+        bonds: state.bonds,
+        lore: state.lore,
+        upgrades: state.upgrades,
+        fielded: state.fielded,
+      });
       break;
     default:
-      if (button.dataset.action.startsWith('companion:')) {
+      if (button.dataset.action.startsWith('buy-')) {
+        state = buyUpgrade(state, button.dataset.action.slice('buy-'.length));
+      } else if (button.dataset.action.startsWith('companion:')) {
         const [, beastId, actionId] = button.dataset.action.split(':');
         state = applyCompanionAction(state, beastId, actionId);
       } else if (button.dataset.action.startsWith('toggle-')) {
@@ -136,6 +154,8 @@ document.addEventListener('click', (event) => {
           started: false,
           roster: state.roster,
           bonds: state.bonds,
+          lore: state.lore,
+          upgrades: state.upgrades,
           fielded,
         });
       }
