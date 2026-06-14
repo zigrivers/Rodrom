@@ -32,6 +32,22 @@ test('renderApp shows a start screen before the expedition begins', () => {
   assert.doesNotMatch(html, /data-action="probe-ash"/);
 });
 
+test('the town (start screen) shows lore and an upgrade option', () => {
+  const html = renderApp(createInitialState({ started: false, lore: 12 }));
+  assert.match(html, /Lore: 12/);
+  assert.match(html, /data-action="buy-infirmary"/);
+});
+
+test('the result screen reports lore earned', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = advanceEncounter(s);
+
+  assert.match(renderApp(s), /lore/i);
+});
+
 test('the start screen lets you select which beasts to field', () => {
   const html = renderApp(createInitialState({ started: false }));
   assert.match(html, /data-action="toggle-grave-hound"/);

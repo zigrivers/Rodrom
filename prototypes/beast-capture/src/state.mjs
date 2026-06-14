@@ -31,6 +31,36 @@ const BEAST_STATS = {
   'grave-hound': { health: 4 },
   'mireback-tortoise': { health: 6 },
 };
+const LEADER_BASE_HP = 6;
+
+// Town services bought with Lore between runs (E8). Effects are read where
+// relevant (e.g. infirmary raises the leader's max HP in createInitialState).
+export const UPGRADES = {
+  infirmary: { name: 'Infirmary', describe: '+1 Leader max HP' },
+};
+
+export function upgradeCost(key, level) {
+  return 5 + (level ?? 0) * 5;
+}
+
+export function buyUpgrade(state, key) {
+  if (!UPGRADES[key]) {
+    return state;
+  }
+  const level = state.upgrades[key] ?? 0;
+  const cost = upgradeCost(key, level);
+  if (state.lore < cost) {
+    return state;
+  }
+  return createInitialState({
+    started: false,
+    roster: state.roster,
+    bonds: state.bonds,
+    fielded: state.fielded,
+    lore: state.lore - cost,
+    upgrades: { ...state.upgrades, [key]: level + 1 },
+  });
+}
 
 function buildBeast(id) {
   if (PLAYER_BEASTS[id]) {
@@ -84,6 +114,8 @@ export function seedEncounterKnowledge(state) {
 export function createInitialState(options = {}) {
   const encounterIds = options.encounterIds ?? ['ashwing-moth', 'chain-maw', 'storm-antler'];
   const fielded = options.fielded ?? [...FIELDABLE];
+  const upgrades = options.upgrades ?? {};
+  const leaderMaxHealth = LEADER_BASE_HP + (upgrades.infirmary ?? 0);
 
   const base = {
     started: options.started ?? true,
@@ -91,6 +123,9 @@ export function createInitialState(options = {}) {
     roster: options.roster ?? [],
     // Bond level per captured beast (times fielded), carried across runs.
     bonds: options.bonds ?? {},
+    // Town currency and persistent upgrades, carried across runs.
+    lore: options.lore ?? 0,
+    upgrades,
     // Which allied beasts are fielded this run (party composition).
     fielded,
     encounterIds,
@@ -100,7 +135,7 @@ export function createInitialState(options = {}) {
     expeditionComplete: false,
     result: null,
     party: {
-      leader: { health: 6, maxHealth: 6 },
+      leader: { health: leaderMaxHealth, maxHealth: leaderMaxHealth },
       beasts: buildPartyBeasts(fielded),
       tools: Object.fromEntries(Object.values(TOOLS).map((tool) => [tool.id, tool.uses])),
       captures: [],

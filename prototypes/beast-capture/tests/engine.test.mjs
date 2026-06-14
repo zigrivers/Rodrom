@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createInitialState, buildEncounterOrder } from '../src/state.mjs';
+import { createInitialState, buildEncounterOrder, buyUpgrade, upgradeCost } from '../src/state.mjs';
 import {
   advanceEncounter,
   anchorExpedition,
@@ -112,6 +112,33 @@ test('run variation builds different encounter orders, always tutorial-first and
   assert.equal(b[0], 'ashwing-moth');
   const everShowsVeil = [0, 1, 2].some((variant) => buildEncounterOrder(variant).includes('veil-lynx'));
   assert.ok(everShowsVeil);
+});
+
+test('a completed run earns lore from captures and depth reached', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0 });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = advanceEncounter(s); // completes: 1 capture, depth 1 -> 1*3 + 1 = 4 lore
+
+  assert.equal(s.expeditionComplete, true);
+  assert.equal(s.lore, 4);
+  assert.equal(s.result.loreEarned, 4);
+});
+
+test('buying the infirmary upgrade spends lore and raises leader max HP', () => {
+  const town = createInitialState({ started: false, lore: 10, upgrades: {} });
+  assert.equal(town.party.leader.maxHealth, 6);
+
+  const after = buyUpgrade(town, 'infirmary'); // cost upgradeCost('infirmary', 0)
+  assert.equal(after.lore, 10 - upgradeCost('infirmary', 0));
+  assert.equal(after.upgrades.infirmary, 1);
+  assert.equal(after.party.leader.maxHealth, 7);
+});
+
+test('an unaffordable upgrade is a no-op', () => {
+  const broke = createInitialState({ started: false, lore: 1, upgrades: {} });
+  assert.equal(buyUpgrade(broke, 'infirmary'), broke);
 });
 
 test('completing an expedition banks its captures into the roster', () => {

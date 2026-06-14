@@ -1,5 +1,6 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
 import { canAdvanceEncounter, tensionLabel } from './engine.mjs';
+import { upgradeCost } from './state.mjs';
 
 export function renderApp(state) {
   if (!state.started) {
@@ -9,6 +10,9 @@ export function renderApp(state) {
         <p>Lead a short expedition into the spiral. Read each beast, drive it into a
         bindable posture, and capture it — or kill it, or withdraw before it costs you.</p>
         ${renderRoster(state.roster)}
+        <h3>Town</h3>
+        <p>Lore: ${state.lore}</p>
+        ${renderTownUpgrades(state)}
         <h3>Party — who do you field?</h3>
         <p>Each beast brings different actions, so your party decides which captures are even possible.</p>
         ${renderPartyPicker(state.fielded, state.roster, state.bonds)}
@@ -23,8 +27,9 @@ export function renderApp(state) {
         <h1>Expedition Complete</h1>
         <p>Result: ${state.result.rank}</p>
         <p>Captures this run: ${state.result.captures}</p>
+        <p>Lore earned: ${state.result.loreEarned} (town total: ${state.lore})</p>
         ${renderRoster(state.roster)}
-        <button data-action="replay">Run Again</button>
+        <button data-action="replay">Return to town</button>
         <h3>Learned Clue Summary</h3>
         ${renderClueSummary(state.codexHints)}
         <h3>Log</h3>
@@ -129,6 +134,16 @@ export function renderApp(state) {
 
 function renderDisabled(disabled) {
   return disabled ? 'disabled' : '';
+}
+
+function renderTownUpgrades(state) {
+  const level = state.upgrades.infirmary ?? 0;
+  const cost = upgradeCost('infirmary', level);
+  const affordable = state.lore >= cost;
+  return `
+    <p>Infirmary — level ${level} (Leader max HP ${6 + level})</p>
+    <button data-action="buy-infirmary" ${affordable ? '' : 'disabled'}>Upgrade Infirmary: +1 Leader HP (${cost} lore)</button>
+  `;
 }
 
 function renderPartyPicker(fielded, roster, bonds = {}) {

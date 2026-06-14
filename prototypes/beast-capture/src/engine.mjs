@@ -26,12 +26,15 @@ function completeExpedition(state, rank) {
       bonds[id] = (bonds[id] ?? 0) + 1;
     }
   }
+  const captures = state.party.captures.length;
+  const loreEarned = captures * 3 + state.currentEncounter.depth;
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures: state.party.captures.length },
+    result: { rank, captures, loreEarned },
     roster: [...state.roster, ...state.party.captures],
     bonds,
+    lore: (state.lore ?? 0) + loreEarned,
   };
 }
 
