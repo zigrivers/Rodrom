@@ -12,24 +12,30 @@ import {
 import { renderApp } from './ui.mjs';
 
 const ROSTER_KEY = 'spiral-descent-roster';
+const BONDS_KEY = 'spiral-descent-bonds';
 
-function loadRoster() {
+function loadJSON(key, fallback) {
   try {
-    return JSON.parse(localStorage.getItem(ROSTER_KEY)) ?? [];
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
   } catch {
-    return [];
+    return fallback;
   }
 }
 
-function saveRoster(roster) {
+function saveCampaign(s) {
   try {
-    localStorage.setItem(ROSTER_KEY, JSON.stringify(roster ?? []));
+    localStorage.setItem(ROSTER_KEY, JSON.stringify(s.roster ?? []));
+    localStorage.setItem(BONDS_KEY, JSON.stringify(s.bonds ?? {}));
   } catch {
     // ignore storage errors (private mode, quota, etc.)
   }
 }
 
-let state = createInitialState({ started: false, roster: loadRoster() });
+let state = createInitialState({
+  started: false,
+  roster: loadJSON(ROSTER_KEY, []),
+  bonds: loadJSON(BONDS_KEY, {}),
+});
 const app = document.querySelector('#app');
 
 function startExpedition() {
@@ -38,6 +44,7 @@ function startExpedition() {
     started: true,
     encounterIds: buildEncounterOrder(variant),
     roster: state.roster,
+    bonds: state.bonds,
     fielded: state.fielded,
   });
 }
@@ -106,20 +113,28 @@ document.addEventListener('click', (event) => {
       state = advanceEncounter(state);
       break;
     case 'replay':
-      state = createInitialState({ started: false, roster: state.roster });
+      state = createInitialState({ started: false, roster: state.roster, bonds: state.bonds });
       break;
     default:
-      if (button.dataset.action.startsWith('toggle-')) {
+      if (button.dataset.action.startsWith('companion:')) {
+        const [, beastId, actionId] = button.dataset.action.split(':');
+        state = applyCompanionAction(state, beastId, actionId);
+      } else if (button.dataset.action.startsWith('toggle-')) {
         const beastId = button.dataset.action.slice('toggle-'.length);
         const fielded = state.fielded.includes(beastId)
           ? state.fielded.filter((id) => id !== beastId)
           : [...state.fielded, beastId];
-        state = createInitialState({ started: false, roster: state.roster, fielded });
+        state = createInitialState({
+          started: false,
+          roster: state.roster,
+          bonds: state.bonds,
+          fielded,
+        });
       }
       break;
   }
 
-  saveRoster(state.roster);
+  saveCampaign(state);
   rerender();
 });
 

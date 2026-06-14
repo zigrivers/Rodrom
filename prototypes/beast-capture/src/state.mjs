@@ -1,4 +1,4 @@
-import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS } from './content.mjs';
+import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
 
 export function createTargetState(targetId) {
   const target = TARGET_BEASTS[targetId];
@@ -31,25 +31,65 @@ const BEAST_STATS = {
   'mireback-tortoise': { health: 6 },
 };
 
+function buildBeast(id) {
+  if (PLAYER_BEASTS[id]) {
+    const health = BEAST_STATS[id]?.health ?? 4;
+    return [id, { ...PLAYER_BEASTS[id], fatigue: 0, health, maxHealth: health }];
+  }
+  if (CAPTURED_ALLY[id] && TARGET_BEASTS[id]) {
+    const health = 3;
+    return [
+      id,
+      {
+        id,
+        name: TARGET_BEASTS[id].name,
+        actions: [CAPTURED_ALLY[id].action],
+        fatigue: 0,
+        health,
+        maxHealth: health,
+      },
+    ];
+  }
+  return null;
+}
+
 function buildPartyBeasts(fielded) {
-  return Object.fromEntries(
-    fielded
-      .filter((id) => PLAYER_BEASTS[id])
-      .map((id) => {
-        const health = BEAST_STATS[id]?.health ?? 4;
-        return [id, { ...PLAYER_BEASTS[id], fatigue: 0, health, maxHealth: health }];
-      })
-  );
+  return Object.fromEntries(fielded.map(buildBeast).filter(Boolean));
+}
+
+// Passive affinity: a bonded captured beast (bond >= 1) recognises a target of
+// its own attunement, revealing it on arrival (a codex hint). Concealed beasts
+// resist it. Does not auto-probe — you still lock it in with a probe.
+export function seedEncounterKnowledge(state) {
+  const target = state.currentEncounter.target;
+  const def = TARGET_BEASTS[target.id];
+  if (def.concealed) {
+    return state;
+  }
+
+  const hints = new Set(state.codexHints[target.id] ?? []);
+  for (const id of state.fielded) {
+    if (CAPTURED_ALLY[id] && (state.bonds[id] ?? 0) >= 1 && TARGET_BEASTS[id]?.primaryAttunement === target.primaryAttunement) {
+      hints.add(target.primaryAttunement);
+    }
+  }
+
+  if (hints.size === (state.codexHints[target.id] ?? []).length) {
+    return state;
+  }
+  return { ...state, codexHints: { ...state.codexHints, [target.id]: [...hints] } };
 }
 
 export function createInitialState(options = {}) {
   const encounterIds = options.encounterIds ?? ['ashwing-moth', 'chain-maw', 'storm-antler'];
   const fielded = options.fielded ?? [...FIELDABLE];
 
-  return {
+  const base = {
     started: options.started ?? true,
     // Campaign-level roster of captured beasts, carried across runs.
     roster: options.roster ?? [],
+    // Bond level per captured beast (times fielded), carried across runs.
+    bonds: options.bonds ?? {},
     // Which allied beasts are fielded this run (party composition).
     fielded,
     encounterIds,
@@ -80,4 +120,6 @@ export function createInitialState(options = {}) {
       },
     },
   };
+
+  return seedEncounterKnowledge(base);
 }

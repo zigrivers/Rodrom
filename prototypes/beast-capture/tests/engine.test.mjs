@@ -130,6 +130,41 @@ test('the roster carries across runs and accumulates new captures', () => {
   assert.deepEqual(s.roster, ['chain-maw', 'ashwing-moth']);
 });
 
+test('a fielded captured beast contributes its signature action', () => {
+  let s = createInitialState({ roster: ['chain-maw'], fielded: ['chain-maw'], encounterIds: ['chain-maw'] });
+  assert.ok(s.party.beasts['chain-maw']);
+
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'chain-maw', 'slam'); // captured Chain Maw staggers, no Mireback needed
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+});
+
+test('completing a run increments the bond of fielded captured beasts', () => {
+  let s = createInitialState({
+    roster: ['chain-maw'],
+    fielded: ['chain-maw'],
+    encounterIds: ['chain-maw'],
+    bonds: { 'chain-maw': 0 },
+  });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'chain-maw', 'slam');
+  s = attemptCapture(s);
+  s = advanceEncounter(s);
+
+  assert.equal(s.bonds['chain-maw'], 1);
+});
+
+test('a bonded captured beast reveals a matching-attunement target on arrival', () => {
+  const s = createInitialState({
+    roster: ['ashwing-moth'],
+    fielded: ['ashwing-moth'],
+    encounterIds: ['ashwing-moth'],
+    bonds: { 'ashwing-moth': 1 },
+  });
+
+  assert.ok(s.codexHints['ashwing-moth']?.includes('ash'));
+});
+
 test('fielding a subset of beasts omits the unfielded ones from the party', () => {
   const s = createInitialState({ fielded: ['mireback-tortoise'] });
   assert.deepEqual(Object.keys(s.party.beasts), ['mireback-tortoise']);
