@@ -113,6 +113,28 @@ export const TARGET_BEASTS = {
   },
 };
 
+// Run omens (cme.6): a run-level condition rolled at the start of each
+// expedition that changes how it plays. `still-air` is the neutral baseline;
+// the rest hook existing tunable seams (starting pressure, lore, knowledge).
+export const OMENS = {
+  'still-air': { name: 'Still Air', desc: 'The deep is quiet. Nothing stirs to help or hinder you.' },
+  'restless-deep': {
+    name: 'Restless Deep',
+    desc: 'Every layer presses from the first breath (+1 starting pressure).',
+    startPressure: 1,
+  },
+  'bountiful-vein': {
+    name: 'Bountiful Vein',
+    desc: 'Lore runs rich here — each capture yields +2 bonus Lore.',
+    lorePerCapture: 2,
+  },
+  'thin-veil': {
+    name: 'Thin Veil',
+    desc: "The opening quarry's attunement is already plain to you.",
+    revealOpener: true,
+  },
+};
+
 export const TOOLS = {
   'torch-pylon': { id: 'torch-pylon', name: 'Torch Pylon', uses: 1 },
   'salt-marker': { id: 'salt-marker', name: 'Salt Marker', uses: 1 },

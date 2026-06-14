@@ -61,7 +61,8 @@ function completeExpedition(state, rank) {
 
   const captures = state.party.captures.length;
   const cleanCaptures = captureLog.filter((grade) => grade.clean).length;
-  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore;
+  const omenLore = (state.omen?.lorePerCapture ?? 0) * captures; // Bountiful Vein (cme.6)
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore;
   return {
     ...state,
     expeditionComplete: true,
@@ -612,6 +613,7 @@ export function advanceEncounter(state) {
 
   const depth = nextIndex + 1;
   const beastId = state.encounterIds[nextIndex % state.encounterIds.length];
+  const layerPressure = startingPressure(depth) + (state.omen?.startPressure ?? 0); // Restless Deep (cme.6)
   const advanced = seedEncounterKnowledge({
     ...state,
     encounterIndex: nextIndex,
@@ -620,7 +622,7 @@ export function advanceEncounter(state) {
       depth,
       anchored: false,
       turn: 1,
-      pressure: startingPressure(depth),
+      pressure: layerPressure,
       riskLevel: carryoverPressure,
       escapeProgress: 0,
       windowDecay: 0,

@@ -1,4 +1,5 @@
 import { createInitialState, buildEncounterOrder, buyUpgrade } from './state.js';
+import { OMENS } from './content.js';
 import {
   applyHeroProbe,
   applyGuardAction,
@@ -51,10 +52,14 @@ let state = createInitialState({ started: false, ...campaign });
 const app = document.querySelector('#app');
 
 function startExpedition() {
-  const variant = Math.floor(Math.random() * 3);
+  const firstRun = (state.roster ?? []).length === 0;
+  const variant = Math.floor(Math.random() * 4);
+  const omenKeys = Object.keys(OMENS);
+  const omen = omenKeys[Math.floor(Math.random() * omenKeys.length)];
   return createInitialState({
     started: true,
-    encounterIds: buildEncounterOrder(variant),
+    encounterIds: buildEncounterOrder(variant, firstRun),
+    omen,
     roster: state.roster,
     bonds: state.bonds,
     lore: state.lore,

@@ -57,6 +57,7 @@ export function renderApp(state) {
         <h2>${target.name}</h2>
         <p class="guidance">${captureGuidance(state)}</p>
         <div class="stats">
+          ${state.omen ? `<p class="omen">Omen: <strong>${state.omen.name}</strong> — ${state.omen.desc}</p>` : ''}
           <p>Layer ${state.currentEncounter.depth} (the deeper you go, the harder it presses)</p>
           <p>Turn: ${state.currentEncounter.turn}</p>
           <p>Target HP: ${target.health}/${target.maxHealth}</p>
