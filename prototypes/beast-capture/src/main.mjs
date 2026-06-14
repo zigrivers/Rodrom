@@ -8,6 +8,7 @@ import {
   attemptCapture,
   withdrawEncounter,
   advanceEncounter,
+  extractExpedition,
 } from './engine.mjs';
 import { renderApp } from './ui.mjs';
 
@@ -111,6 +112,9 @@ document.addEventListener('click', (event) => {
       break;
     case 'advance':
       state = advanceEncounter(state);
+      break;
+    case 'extract':
+      state = extractExpedition(state);
       break;
     case 'replay':
       state = createInitialState({ started: false, roster: state.roster, bonds: state.bonds });
