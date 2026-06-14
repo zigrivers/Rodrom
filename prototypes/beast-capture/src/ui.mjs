@@ -178,6 +178,10 @@ function captureGuidance(state) {
     return `${target.name} masks its true nature. Use Grave Hound: Scent Read to reveal it.`;
   }
   if (!enc.flags.attunementMatch) {
+    const revealed = (state.codexHints[target.id] ?? []).includes(target.primaryAttunement);
+    if (revealed) {
+      return `It responds to ${target.primaryAttunement} — probe ${formatLabel(target.primaryAttunement)} to lock it in.`;
+    }
     return `Learn what ${target.name} responds to — probe attunements or use Grave Hound: Scent Read.`;
   }
   return `It responds to ${target.primaryAttunement}. Now ${triggerHint(def)} to make it ${def.bindPosture}.`;

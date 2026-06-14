@@ -43,6 +43,13 @@ test('the encounter view coaches the player toward the capture path', () => {
   assert.match(renderApp(s), /Capture now before it closes/i);
 });
 
+test('after scent-read reveals the attunement, the coach says to probe it', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  s = applyCompanionAction(s, 'grave-hound', 'scent-read');
+
+  assert.match(renderApp(s), /probe Ash to lock it in/i);
+});
+
 test('a concealed beast is coached to reveal it with Scent Read', () => {
   const s = createInitialState({ encounterIds: ['veil-lynx'] });
   assert.match(renderApp(s), /reveal it/i);
