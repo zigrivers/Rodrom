@@ -184,7 +184,8 @@ test('completing a run increments the bond of fielded captured beasts', () => {
   s = attemptCapture(s);
   s = extractExpedition(s);
 
-  assert.equal(s.bonds['chain-maw'], 1);
+  // +1 for completing a run with it fielded, +1 for fusing the duplicate capture (cme.7)
+  assert.equal(s.bonds['chain-maw'], 2);
 });
 
 test('Veilsight: a fielded Veil Lynx ally reveals target attunements on arrival', () => {
@@ -650,6 +651,44 @@ test('a sloppily captured beast joins the roster unbonded', () => {
 test('the coach is on by default and can be disabled', () => {
   assert.equal(createInitialState().coach, true);
   assert.equal(createInitialState({ coach: false }).coach, false);
+});
+
+// cme.7 — duplicate-capture payoff: re-capturing an owned species fuses into a
+// deeper bond and converts the surplus to Lore, instead of a dead roster dupe.
+test('capturing a species you already own deepens its bond, not the roster', () => {
+  let s = createInitialState({
+    roster: ['chain-maw'],
+    bonds: { 'chain-maw': 1 },
+    fielded: ['mireback-tortoise'],
+    encounterIds: ['chain-maw'],
+  });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  assert.equal(s.roster.filter((id) => id === 'chain-maw').length, 1, 'no dead duplicate entry');
+  assert.equal(s.roster.length, 1);
+  assert.equal(s.bonds['chain-maw'], 2, 'fused +1 bond');
+});
+
+test('a duplicate capture converts the surplus into bonus Lore', () => {
+  let s = createInitialState({
+    roster: ['chain-maw'],
+    bonds: { 'chain-maw': 1 },
+    fielded: ['mireback-tortoise'],
+    encounterIds: ['chain-maw'],
+    lore: 0,
+  });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s); // clean + fast
+  s = extractExpedition(s);
+
+  assert.equal(s.result.dupesFused, 1);
+  assert.equal(s.result.dupeLore, 2);
+  // base 4 + capture bonus 3 + dupe convert 2 = 9
+  assert.equal(s.result.loreEarned, 9);
 });
 
 // cme.4 — town services beyond +HP: distinct Lore sinks that grant capabilities.

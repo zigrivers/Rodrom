@@ -13,6 +13,9 @@ const WINDOW_GRACE = 3; // open-window turns before a bindable beast slips loose
 const CLEAN_CAPTURE_LORE = 2;
 const FAST_CAPTURE_LORE = 1;
 const FAST_CAPTURE_TURNS = 4;
+// Duplicate-capture payoff (cme.7): re-capturing an owned species fuses into a
+// deeper bond and converts the surplus to this much Lore instead of a dead dupe.
+const DUPE_CONVERT_LORE = 2;
 
 // Deeper layers press harder: per-turn pressure rises with descent depth, so
 // frenzy and failure scale with depth (run structure, t9i.3).
@@ -36,38 +39,57 @@ function appendLog(state, line) {
 function completeExpedition(state, rank) {
   const originalBonds = state.bonds ?? {};
   const bonds = { ...originalBonds };
+
+  // 1. Fielded captured allies deepen their bond by surviving the run.
   for (const id of state.fielded) {
     if (CAPTURED_ALLY[id]) {
       bonds[id] = (bonds[id] ?? 0) + 1;
     }
   }
 
-  // Score each capture: clean/fast earn bonus Lore; a clean capture of a new
-  // species (no prior bond) arrives pre-bonded (cme.3). Duplicate-capture
-  // payoff is cme.7's job, so we only pre-bond genuinely new species here.
+  // Which species were captured cleanly (for the cme.3 pre-bond on new species).
   const captureLog = state.captureLog ?? [];
-  let bonusLore = 0;
+  const capturedClean = {};
   for (const grade of captureLog) {
-    if (grade.clean) {
-      bonusLore += CLEAN_CAPTURE_LORE;
-      if (originalBonds[grade.id] === undefined) {
-        bonds[grade.id] = (bonds[grade.id] ?? 0) + 1;
+    capturedClean[grade.id] = capturedClean[grade.id] || grade.clean;
+  }
+
+  // 2. Bank captures: a new species joins the roster (a clean one arrives
+  // pre-bonded, cme.3); a species you already own fuses into a deeper bond and
+  // converts the surplus to Lore instead of a dead duplicate entry (cme.7).
+  const roster = [...state.roster];
+  const owned = new Set(state.roster);
+  let dupesFused = 0;
+  for (const id of state.party.captures) {
+    if (owned.has(id)) {
+      bonds[id] = (bonds[id] ?? 0) + 1; // fuse
+      dupesFused += 1;
+    } else {
+      roster.push(id);
+      owned.add(id);
+      if (capturedClean[id] && originalBonds[id] === undefined) {
+        bonds[id] = (bonds[id] ?? 0) + 1; // clean-capture pre-bond (cme.3)
       }
-    }
-    if (grade.fast) {
-      bonusLore += FAST_CAPTURE_LORE;
     }
   }
 
+  // 3. Lore: base (captures + depth) + capture-quality bonus (cme.3) + omen
+  // (cme.6) + duplicate conversion (cme.7).
+  let bonusLore = 0;
+  for (const grade of captureLog) {
+    if (grade.clean) bonusLore += CLEAN_CAPTURE_LORE;
+    if (grade.fast) bonusLore += FAST_CAPTURE_LORE;
+  }
   const captures = state.party.captures.length;
   const cleanCaptures = captureLog.filter((grade) => grade.clean).length;
-  const omenLore = (state.omen?.lorePerCapture ?? 0) * captures; // Bountiful Vein (cme.6)
-  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore;
+  const omenLore = (state.omen?.lorePerCapture ?? 0) * captures;
+  const dupeLore = dupesFused * DUPE_CONVERT_LORE;
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore;
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures },
-    roster: [...state.roster, ...state.party.captures],
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore },
+    roster,
     bonds,
     lore: (state.lore ?? 0) + loreEarned,
   };

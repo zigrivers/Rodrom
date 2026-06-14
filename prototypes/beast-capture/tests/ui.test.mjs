@@ -314,3 +314,18 @@ test('the result screen reports the clean/fast capture bonus', () => {
 
   assert.match(renderApp(s), /Capture bonus/i);
 });
+
+test('the result screen reports duplicate captures fused into bonds (cme.7)', () => {
+  let s = createInitialState({
+    roster: ['chain-maw'],
+    bonds: { 'chain-maw': 1 },
+    fielded: ['mireback-tortoise'],
+    encounterIds: ['chain-maw'],
+  });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  assert.match(renderApp(s), /fused|duplicate/i);
+});
