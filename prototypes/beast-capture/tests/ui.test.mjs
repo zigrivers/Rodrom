@@ -25,6 +25,22 @@ test('renderApp exposes the browser-visible probes, tools, and beast actions for
   assert.doesNotMatch(html, /Salt Marker/);
 });
 
+test('the encounter view coaches the player toward the capture path', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  assert.match(renderApp(s), /Learn what Ashwing Moth responds to/i);
+
+  s = applyHeroProbe(s, 'ash');
+  assert.match(renderApp(s), /make it cornered/i);
+
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  assert.match(renderApp(s), /Capture now before it closes/i);
+});
+
+test('a concealed beast is coached to reveal it with Scent Read', () => {
+  const s = createInitialState({ encounterIds: ['veil-lynx'] });
+  assert.match(renderApp(s), /reveal it/i);
+});
+
 test('renderApp exposes the full grave-hound and mireback action sets', () => {
   const html = renderApp(createInitialState());
 

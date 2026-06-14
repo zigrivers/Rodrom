@@ -28,6 +28,7 @@ export function renderApp(state) {
       <section class="panel">
         <h1>Beast Capture Prototype</h1>
         <h2>${target.name}</h2>
+        <p class="guidance">${captureGuidance(state)}</p>
         <div class="stats">
           <p>Turn: ${state.currentEncounter.turn}</p>
           <p>Target HP: ${target.health}/${target.maxHealth}</p>
@@ -137,6 +138,33 @@ function formatLabel(value) {
     .split('-')
     .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
     .join(' ');
+}
+
+// Contextual coaching so a first-time player can find the capture path (F1).
+function triggerHint(def) {
+  const trigger = def.postureTrigger;
+  if (trigger.type === 'tool') {
+    return `place the ${TOOLS[trigger.toolId]?.name ?? trigger.toolId}`;
+  }
+  const beastName = trigger.beastId === 'grave-hound' ? 'Grave Hound' : 'Mireback';
+  return `use ${beastName}: ${formatLabel(trigger.actionId)}`;
+}
+
+function captureGuidance(state) {
+  const enc = state.currentEncounter;
+  const target = enc.target;
+  const def = TARGET_BEASTS[target.id];
+
+  if (target.captureState === 'bindable') {
+    return 'Window open — Capture now before it closes.';
+  }
+  if (def.concealed && target.posture !== def.bindPosture) {
+    return `${target.name} masks its true nature. Use Grave Hound: Scent Read to reveal it.`;
+  }
+  if (!enc.flags.attunementMatch) {
+    return `Learn what ${target.name} responds to — probe attunements or use Grave Hound: Scent Read.`;
+  }
+  return `It responds to ${target.primaryAttunement}. Now ${triggerHint(def)} to make it ${def.bindPosture}.`;
 }
 
 function describeCaptureState(value) {
