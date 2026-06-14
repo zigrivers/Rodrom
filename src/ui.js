@@ -1,4 +1,4 @@
-import { TARGET_BEASTS, TOOLS } from './content.js';
+import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS } from './content.js';
 import { canAdvanceEncounter, tensionLabel } from './engine.js';
 
 export function renderApp(state) {
@@ -9,6 +9,9 @@ export function renderApp(state) {
         <p>Lead a short expedition into the spiral. Read each beast, drive it into a
         bindable posture, and capture it — or kill it, or withdraw before it costs you.</p>
         ${renderRoster(state.roster)}
+        <h3>Party — who do you field?</h3>
+        <p>Each beast brings different actions, so your party decides which captures are even possible.</p>
+        ${renderPartyPicker(state.fielded)}
         <button data-action="start-expedition">Start Expedition</button>
       </section>
     `;
@@ -71,12 +74,22 @@ export function renderApp(state) {
           >
             Bait Stake
           </button>
+          ${
+            state.party.beasts['grave-hound']
+              ? `
           <button data-action="hound-scent-read" ${renderDisabled(encounterResolved)}>Grave Hound: Scent Read</button>
           <button data-action="hound-harry" ${renderDisabled(encounterResolved)}>Grave Hound: Harry</button>
-          <button data-action="hound-warning-bark" ${renderDisabled(encounterResolved)}>Grave Hound: Warning Bark</button>
+          <button data-action="hound-warning-bark" ${renderDisabled(encounterResolved)}>Grave Hound: Warning Bark</button>`
+              : ''
+          }
+          ${
+            state.party.beasts['mireback-tortoise']
+              ? `
           <button data-action="mireback-brace" ${renderDisabled(encounterResolved)}>Mireback: Brace</button>
           <button data-action="mireback-shove" ${renderDisabled(encounterResolved)}>Mireback: Shove</button>
-          <button data-action="mireback-burden-shelter" ${renderDisabled(encounterResolved)}>Mireback: Burden Shelter</button>
+          <button data-action="mireback-burden-shelter" ${renderDisabled(encounterResolved)}>Mireback: Burden Shelter</button>`
+              : ''
+          }
           <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
           <button data-action="withdraw" ${renderDisabled(encounterResolved)}>Withdraw</button>
           <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Advance</button>
@@ -85,8 +98,9 @@ export function renderApp(state) {
       <aside class="panel">
         <h3>Expedition</h3>
         <p>Leader HP: ${state.party.leader.health}/${state.party.leader.maxHealth}</p>
-        <p>Grave Hound fatigue: ${state.party.beasts['grave-hound'].fatigue}</p>
-        <p>Mireback fatigue: ${state.party.beasts['mireback-tortoise'].fatigue}</p>
+        ${Object.values(state.party.beasts)
+          .map((beast) => `<p>${beast.name} fatigue: ${beast.fatigue}</p>`)
+          .join('')}
         <p>Captures: ${renderCaptureNames(state.party.captures)}</p>
         <h3>Tool Counts</h3>
         <ul class="summary-list">${renderToolCounts(state.party.tools)}</ul>
@@ -105,6 +119,15 @@ export function renderApp(state) {
 
 function renderDisabled(disabled) {
   return disabled ? 'disabled' : '';
+}
+
+function renderPartyPicker(fielded) {
+  return ['grave-hound', 'mireback-tortoise']
+    .map((id) => {
+      const fieldedNow = fielded.includes(id);
+      return `<button data-action="toggle-${id}">${PLAYER_BEASTS[id].name}: ${fieldedNow ? 'fielded' : 'benched'}</button>`;
+    })
+    .join('');
 }
 
 function renderRoster(roster) {

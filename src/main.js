@@ -38,6 +38,7 @@ function startExpedition() {
     started: true,
     encounterIds: buildEncounterOrder(variant),
     roster: state.roster,
+    fielded: state.fielded,
   });
 }
 
@@ -108,6 +109,13 @@ document.addEventListener('click', (event) => {
       state = createInitialState({ started: false, roster: state.roster });
       break;
     default:
+      if (button.dataset.action.startsWith('toggle-')) {
+        const beastId = button.dataset.action.slice('toggle-'.length);
+        const fielded = state.fielded.includes(beastId)
+          ? state.fielded.filter((id) => id !== beastId)
+          : [...state.fielded, beastId];
+        state = createInitialState({ started: false, roster: state.roster, fielded });
+      }
       break;
   }
 
