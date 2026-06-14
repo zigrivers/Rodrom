@@ -2,6 +2,17 @@ import { TARGET_BEASTS, TOOLS } from './content.mjs';
 import { canAdvanceEncounter, tensionLabel } from './engine.mjs';
 
 export function renderApp(state) {
+  if (!state.started) {
+    return `
+      <section class="panel">
+        <h1>Beast Capture Prototype</h1>
+        <p>Lead a short expedition into the spiral. Read each beast, drive it into a
+        bindable posture, and capture it — or kill it, or withdraw before it costs you.</p>
+        <button data-action="start-expedition">Start Expedition</button>
+      </section>
+    `;
+  }
+
   if (state.expeditionComplete) {
     return `
       <section class="panel">
@@ -45,6 +56,7 @@ export function renderApp(state) {
           <button data-action="probe-ash" ${renderDisabled(encounterResolved)}>Probe Ash</button>
           <button data-action="probe-iron" ${renderDisabled(encounterResolved)}>Probe Iron</button>
           <button data-action="probe-storm" ${renderDisabled(encounterResolved)}>Probe Storm</button>
+          <button data-action="probe-veil" ${renderDisabled(encounterResolved)}>Probe Veil</button>
           <button
             data-action="tool-snare-line"
             ${renderDisabled(encounterResolved || state.party.tools['snare-line'] === 0)}

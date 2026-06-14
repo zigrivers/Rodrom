@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createInitialState } from '../src/state.mjs';
+import { createInitialState, buildEncounterOrder } from '../src/state.mjs';
 import {
   advanceEncounter,
   applyCompanionAction,
@@ -96,6 +96,17 @@ test('veil lynx conceals its attunement until scent-read reveals it', () => {
   assert.equal(s.currentEncounter.target.captureState, 'bindable');
   s = attemptCapture(s);
   assert.deepEqual(s.party.captures, ['veil-lynx']);
+});
+
+test('run variation builds different encounter orders, always tutorial-first and sometimes the veil lynx', () => {
+  const a = buildEncounterOrder(0);
+  const b = buildEncounterOrder(1);
+
+  assert.notDeepEqual(a, b);
+  assert.equal(a[0], 'ashwing-moth');
+  assert.equal(b[0], 'ashwing-moth');
+  const everShowsVeil = [0, 1, 2].some((variant) => buildEncounterOrder(variant).includes('veil-lynx'));
+  assert.ok(everShowsVeil);
 });
 
 test('advance is blocked until the current encounter is captured or defeated', () => {

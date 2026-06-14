@@ -14,10 +14,21 @@ export function createTargetState(targetId) {
   };
 }
 
+// The tutorial beast always leads; the rest of the pool varies per run so a
+// fresh expedition isn't the same solved sequence every time (F12).
+const ENCOUNTER_POOL = ['chain-maw', 'veil-lynx', 'storm-antler'];
+
+export function buildEncounterOrder(variant = 0) {
+  const dropIndex = ((variant % ENCOUNTER_POOL.length) + ENCOUNTER_POOL.length) % ENCOUNTER_POOL.length;
+  const chosen = ENCOUNTER_POOL.filter((_, index) => index !== dropIndex);
+  return ['ashwing-moth', ...chosen];
+}
+
 export function createInitialState(options = {}) {
   const encounterIds = options.encounterIds ?? ['ashwing-moth', 'chain-maw', 'storm-antler'];
 
   return {
+    started: options.started ?? true,
     encounterIds,
     encounterIndex: 0,
     log: ['Expedition begins.'],

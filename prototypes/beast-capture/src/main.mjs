@@ -1,4 +1,4 @@
-import { createInitialState } from './state.mjs';
+import { createInitialState, buildEncounterOrder } from './state.mjs';
 import {
   applyHeroProbe,
   applyGuardAction,
@@ -11,8 +11,13 @@ import {
 } from './engine.mjs';
 import { renderApp } from './ui.mjs';
 
-let state = createInitialState();
+let state = createInitialState({ started: false });
 const app = document.querySelector('#app');
+
+function startExpedition() {
+  const variant = Math.floor(Math.random() * 3);
+  return createInitialState({ started: true, encounterIds: buildEncounterOrder(variant) });
+}
 
 function rerender() {
   app.innerHTML = renderApp(state);
@@ -23,6 +28,9 @@ document.addEventListener('click', (event) => {
   if (!button || button.disabled) return;
 
   switch (button.dataset.action) {
+    case 'start-expedition':
+      state = startExpedition();
+      break;
     case 'strike':
       state = applyStrikeAction(state);
       break;
@@ -37,6 +45,9 @@ document.addEventListener('click', (event) => {
       break;
     case 'probe-storm':
       state = applyHeroProbe(state, 'storm');
+      break;
+    case 'probe-veil':
+      state = applyHeroProbe(state, 'veil');
       break;
     case 'tool-snare-line':
       state = applyToolAction(state, 'snare-line');
@@ -72,7 +83,7 @@ document.addEventListener('click', (event) => {
       state = advanceEncounter(state);
       break;
     case 'replay':
-      state = createInitialState();
+      state = createInitialState({ started: false });
       break;
     default:
       break;

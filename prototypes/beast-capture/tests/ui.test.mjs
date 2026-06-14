@@ -21,8 +21,15 @@ test('renderApp exposes the browser-visible probes, tools, and beast actions for
   assert.match(html, /Bait Stake/);
   assert.match(html, /Grave Hound: Harry/);
   assert.match(html, /Mireback: Brace/);
-  assert.doesNotMatch(html, /Probe Veil/);
+  assert.match(html, /Probe Veil/);
   assert.doesNotMatch(html, /Salt Marker/);
+});
+
+test('renderApp shows a start screen before the expedition begins', () => {
+  const html = renderApp(createInitialState({ started: false }));
+  assert.match(html, /Beast Capture Prototype/);
+  assert.match(html, /data-action="start-expedition"/);
+  assert.doesNotMatch(html, /data-action="probe-ash"/);
 });
 
 test('the encounter view coaches the player toward the capture path', () => {
