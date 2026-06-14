@@ -11,6 +11,7 @@ import {
   applyToolAction,
   attemptCapture,
   canAdvanceEncounter,
+  withdrawEncounter,
 } from '../src/engine.mjs';
 
 test('the default expedition captures all three encounters via their distinct conditions', () => {
@@ -214,6 +215,32 @@ test('relentless reckless pressure can lose the leader and fail the expedition',
 
   assert.equal(s.expeditionComplete, true);
   assert.equal(s.result.rank, 'expedition-failure');
+});
+
+test('withdrawing resolves the encounter without a capture and spares the party', () => {
+  let s = createInitialState({ encounterIds: ['storm-antler'] });
+  s = applyHeroProbe(s, 'storm');
+  const leaderBefore = s.party.leader.health;
+
+  s = withdrawEncounter(s);
+
+  assert.equal(s.currentEncounter.target.captureState, 'withdrawn');
+  assert.equal(canAdvanceEncounter(s), true);
+  assert.equal(s.party.leader.health, leaderBefore);
+  assert.match(s.log.join('\n'), /withdraw/i);
+
+  s = advanceEncounter(s);
+  assert.equal(s.expeditionComplete, true);
+  assert.deepEqual(s.party.captures, []);
+});
+
+test('withdraw is ignored once the encounter is already resolved', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+
+  assert.equal(withdrawEncounter(s), s);
 });
 
 test('resolved encounters ignore later action dispatches instead of mutating state', () => {

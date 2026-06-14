@@ -37,7 +37,9 @@ function addHint(codexHints, targetId, attunement) {
 }
 
 function isTerminalCaptureState(value) {
-  return value === 'defeated' || value === 'captured' || value === 'escaped';
+  return (
+    value === 'defeated' || value === 'captured' || value === 'escaped' || value === 'withdrawn'
+  );
 }
 
 function isTargetActive(target) {
@@ -417,6 +419,28 @@ export function attemptCapture(state) {
       },
     },
     `${target.name} is captured.`
+  );
+}
+
+// Withdraw is a clean exit (kill / capture / withdraw decision, F6): it resolves
+// the encounter with no capture and no retaliation, preserving the expedition.
+export function withdrawEncounter(state) {
+  if (isResolvedEncounter(state)) {
+    return state;
+  }
+
+  const enc = state.currentEncounter;
+  const target = enc.target;
+
+  return appendLog(
+    {
+      ...state,
+      currentEncounter: {
+        ...enc,
+        target: { ...target, captureState: 'withdrawn' },
+      },
+    },
+    `The expedition withdraws from ${target.name}, keeping what it has earned.`
   );
 }
 

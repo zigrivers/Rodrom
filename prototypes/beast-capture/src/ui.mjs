@@ -64,6 +64,7 @@ export function renderApp(state) {
           <button data-action="mireback-shove" ${renderDisabled(encounterResolved)}>Mireback: Shove</button>
           <button data-action="mireback-burden-shelter" ${renderDisabled(encounterResolved)}>Mireback: Burden Shelter</button>
           <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
+          <button data-action="withdraw" ${renderDisabled(encounterResolved)}>Withdraw</button>
           <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Advance</button>
         </div>
       </section>

@@ -102,6 +102,11 @@ test('renderApp hides normal encounter actions once an encounter is resolved', (
   assert.match(html, /data-action="capture"[^>]*disabled/);
 });
 
+test('renderApp offers a withdraw option during an active encounter', () => {
+  const html = renderApp(createInitialState({ encounterIds: ['storm-antler'] }));
+  assert.match(html, /data-action="withdraw"(?![^>]*disabled)/);
+});
+
 test('the encounter view conveys state through cues, not literal meters', () => {
   const html = renderApp(createInitialState({ encounterIds: ['chain-maw'] }));
 

@@ -6,6 +6,7 @@ import {
   applyToolAction,
   applyCompanionAction,
   attemptCapture,
+  withdrawEncounter,
   advanceEncounter,
 } from './engine.mjs';
 import { renderApp } from './ui.mjs';
@@ -63,6 +64,9 @@ document.addEventListener('click', (event) => {
       break;
     case 'capture':
       state = attemptCapture(state);
+      break;
+    case 'withdraw':
+      state = withdrawEncounter(state);
       break;
     case 'advance':
       state = advanceEncounter(state);
