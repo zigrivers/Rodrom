@@ -38,7 +38,7 @@ test('the default expedition captures all three encounters via their distinct co
   state = applyHeroProbe(state, 'storm');
   state = applyToolAction(state, 'bait-stake');
   state = attemptCapture(state);
-  state = advanceEncounter(state);
+  state = extractExpedition(state);
 
   assert.equal(state.expeditionComplete, true);
   assert.equal(state.result.rank, 'strong-success');
@@ -119,7 +119,7 @@ test('a completed run earns lore from captures and depth reached', () => {
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = advanceEncounter(s); // completes: 1 capture, depth 1 -> 1*3 + 1 = 4 lore
+  s = extractExpedition(s); // completes: 1 capture, depth 1 -> 1*3 + 1 = 4 lore
 
   assert.equal(s.expeditionComplete, true);
   assert.equal(s.lore, 4);
@@ -146,7 +146,7 @@ test('completing an expedition banks its captures into the roster', () => {
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = advanceEncounter(s);
+  s = extractExpedition(s);
 
   assert.equal(s.expeditionComplete, true);
   assert.deepEqual(s.roster, ['ashwing-moth']);
@@ -157,7 +157,7 @@ test('the roster carries across runs and accumulates new captures', () => {
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = advanceEncounter(s);
+  s = extractExpedition(s);
 
   assert.deepEqual(s.roster, ['chain-maw', 'ashwing-moth']);
 });
@@ -181,20 +181,57 @@ test('completing a run increments the bond of fielded captured beasts', () => {
   s = applyHeroProbe(s, 'iron');
   s = applyCompanionAction(s, 'chain-maw', 'slam');
   s = attemptCapture(s);
-  s = advanceEncounter(s);
+  s = extractExpedition(s);
 
   assert.equal(s.bonds['chain-maw'], 1);
 });
 
-test('a bonded captured beast reveals a matching-attunement target on arrival', () => {
-  const s = createInitialState({
-    roster: ['ashwing-moth'],
-    fielded: ['ashwing-moth'],
-    encounterIds: ['ashwing-moth'],
-    bonds: { 'ashwing-moth': 1 },
-  });
+test('Veilsight: a fielded Veil Lynx ally reveals target attunements on arrival', () => {
+  const s = createInitialState({ roster: ['veil-lynx'], fielded: ['veil-lynx'], encounterIds: ['chain-maw'] });
+  assert.ok(s.codexHints['chain-maw']?.includes('iron'));
 
-  assert.ok(s.codexHints['ashwing-moth']?.includes('ash'));
+  const without = createInitialState({ encounterIds: ['chain-maw'] });
+  assert.ok(!(without.codexHints['chain-maw'] ?? []).includes('iron'));
+});
+
+test('Grounding Aura: a fielded Storm Antler ally reduces per-turn pressure', () => {
+  const withStorm = applyStrikeAction(
+    createInitialState({ roster: ['storm-antler'], fielded: ['storm-antler'], encounterIds: ['chain-maw'] })
+  );
+  const without = applyStrikeAction(createInitialState({ encounterIds: ['chain-maw'] }));
+
+  assert.equal(withStorm.currentEncounter.pressure, 0);
+  assert.equal(without.currentEncounter.pressure, 1);
+});
+
+test('Iron Hold: a fielded Chain Maw ally keeps the capture window from decaying', () => {
+  let s = createInitialState({
+    roster: ['chain-maw'],
+    fielded: ['grave-hound', 'mireback-tortoise', 'chain-maw'],
+    encounterIds: ['chain-maw'],
+  });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+
+  s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
+  s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
+  s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+});
+
+test('Skittish Kin: a fielded Ashwing ally raises the escape tolerance', () => {
+  let without = createInitialState({ encounterIds: ['chain-maw'] });
+  without = applyHeroProbe(without, 'stone');
+  without = applyHeroProbe(without, 'stone');
+  without = applyHeroProbe(without, 'stone');
+  assert.equal(without.currentEncounter.target.captureState, 'escaped');
+
+  let withKin = createInitialState({ roster: ['ashwing-moth'], fielded: ['ashwing-moth'], encounterIds: ['chain-maw'] });
+  withKin = applyHeroProbe(withKin, 'stone');
+  withKin = applyHeroProbe(withKin, 'stone');
+  withKin = applyHeroProbe(withKin, 'stone');
+  assert.notEqual(withKin.currentEncounter.target.captureState, 'escaped');
 });
 
 test('fielding a subset of beasts omits the unfielded ones from the party', () => {
@@ -266,7 +303,7 @@ test('advance is blocked until the current encounter is captured or defeated', (
 
   assert.equal(nextState.encounterIndex, 0);
   assert.equal(canAdvanceEncounter(nextState), false);
-  assert.match(nextState.log.at(-1), /cannot advance/i);
+  assert.match(nextState.log.at(-1), /cannot descend/i);
 });
 
 test('every non-advance action spends a turn and active targets push pressure back onto the party', () => {
@@ -306,7 +343,7 @@ test('captured encounters preserve learned clues into the expedition result summ
   state = applyToolAction(state, 'snare-line');
   state = applyCompanionAction(state, 'grave-hound', 'harry');
   state = attemptCapture(state);
-  state = advanceEncounter(state);
+  state = extractExpedition(state);
 
   assert.deepEqual(state.codexHints['ashwing-moth'], ['ash']);
   assert.equal(state.result.rank, 'success');
@@ -450,6 +487,27 @@ test('anchoring is unavailable until the layer is resolved and only once per lay
   assert.equal(anchorExpedition(s), anchored); // already anchored -> no-op
 });
 
+test('the descent is endless: descending past the planned layers never auto-completes', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  for (let i = 0; i < 4; i += 1) {
+    s = withdrawEncounter(s);
+    s = advanceEncounter(s);
+    assert.equal(s.expeditionComplete, false);
+  }
+  assert.equal(s.currentEncounter.depth, 5);
+});
+
+test('a successful run ends only by extracting', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  assert.equal(s.expeditionComplete, false); // resolving a layer does not end the run
+
+  s = extractExpedition(s);
+  assert.equal(s.expeditionComplete, true);
+});
+
 test('extracting after a resolved layer ends the run and banks the haul', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'storm-antler'] });
   s = applyHeroProbe(s, 'ash');
@@ -482,7 +540,7 @@ test('withdrawing resolves the encounter without a capture and spares the party'
   assert.equal(s.party.leader.health, leaderBefore);
   assert.match(s.log.join('\n'), /withdraw/i);
 
-  s = advanceEncounter(s);
+  s = extractExpedition(s);
   assert.equal(s.expeditionComplete, true);
   assert.deepEqual(s.party.captures, []);
 });

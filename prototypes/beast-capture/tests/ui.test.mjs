@@ -8,6 +8,7 @@ import {
   applyHeroProbe,
   applyToolAction,
   attemptCapture,
+  extractExpedition,
 } from '../src/engine.mjs';
 import { renderApp } from '../src/ui.mjs';
 
@@ -43,7 +44,7 @@ test('the result screen reports lore earned', () => {
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = advanceEncounter(s);
+  s = extractExpedition(s);
 
   assert.match(renderApp(s), /lore/i);
 });
@@ -57,6 +58,11 @@ test('the start screen lets you select which beasts to field', () => {
 test('the party picker lists captured roster beasts as fieldable', () => {
   const html = renderApp(createInitialState({ started: false, roster: ['ashwing-moth'] }));
   assert.match(html, /data-action="toggle-ashwing-moth"/);
+});
+
+test('the party picker shows each captured ally its distinct passive power', () => {
+  const html = renderApp(createInitialState({ started: false, roster: ['chain-maw'] }));
+  assert.match(html, /Iron Hold/);
 });
 
 test('a fielded captured beast gets its signature action button in an encounter', () => {
@@ -83,7 +89,7 @@ test('the result screen shows the persistent roster including prior captures', (
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = advanceEncounter(s);
+  s = extractExpedition(s);
 
   const html = renderApp(s);
   assert.match(html, /Roster/);
@@ -262,7 +268,7 @@ test('renderApp shows a learned clue summary on the expedition result screen', (
   state = applyToolAction(state, 'snare-line');
   state = applyCompanionAction(state, 'grave-hound', 'harry');
   state = attemptCapture(state);
-  state = advanceEncounter(state);
+  state = extractExpedition(state);
 
   const html = renderApp(state);
 

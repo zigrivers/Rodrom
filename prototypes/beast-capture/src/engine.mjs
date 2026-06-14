@@ -56,6 +56,18 @@ function beastDef(target) {
   return TARGET_BEASTS[target.id];
 }
 
+// Active passives from fielded captured allies (cme.2), keyed to bond level.
+function activePassives(state) {
+  const map = {};
+  for (const id of Object.keys(state.party.beasts)) {
+    const passive = CAPTURED_ALLY[id]?.passive;
+    if (passive) {
+      map[passive] = state.bonds?.[id] ?? 0;
+    }
+  }
+  return map;
+}
+
 function addHint(codexHints, targetId, attunement) {
   return {
     ...codexHints,
@@ -161,7 +173,8 @@ function resolveEncounterPressure(state) {
         : 'Mireback Brace absorbs the counter-pressure.'
     );
   } else {
-    const newPressure = enc.pressure + pressurePerTurn(enc.depth);
+    const grounding = 'grounding-aura' in activePassives(state) ? 1 : 0;
+    const newPressure = enc.pressure + Math.max(0, pressurePerTurn(enc.depth) - grounding);
     next = { ...next, currentEncounter: { ...next.currentEncounter, pressure: newPressure } };
 
     if (newPressure >= FRENZY_PRESSURE) {
@@ -195,7 +208,7 @@ function resolveEncounterPressure(state) {
 function decayCaptureWindow(state) {
   const enc = state.currentEncounter;
   const target = enc.target;
-  if (target.captureState !== 'bindable' || enc.flags.snared) {
+  if (target.captureState !== 'bindable' || enc.flags.snared || 'iron-hold' in activePassives(state)) {
     return state;
   }
 
@@ -243,8 +256,10 @@ export function applyHeroProbe(state, attunement) {
     ...enc.flags,
     attunementMatch: enc.flags.attunementMatch || matched,
   };
+  const passives = activePassives(state);
+  const escapeTolerance = ESCAPE_READS + ('skittish-kin' in passives ? 1 + passives['skittish-kin'] : 0);
   const escapeProgress = matched ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
-  const escaped = !matched && escapeProgress >= ESCAPE_READS && !enc.flags.snared;
+  const escaped = !matched && escapeProgress >= escapeTolerance && !enc.flags.snared;
 
   const updatedTarget = { ...target };
   updatedTarget.captureState = escaped ? 'escaped' : deriveCaptureState(updatedTarget, flags);
@@ -528,26 +543,18 @@ export function extractExpedition(state) {
   );
 }
 
+// The descent is endless (cme.1): descending always generates the next, deeper
+// layer (cycling the beast pool). A run ends only by extracting or by losing the
+// leader, so "push deeper vs. extract" is a real greed gamble.
 export function advanceEncounter(state) {
   if (!canAdvanceEncounter(state)) {
-    return appendLog(state, 'The encounter is still active. You cannot advance yet.');
+    return appendLog(state, 'The encounter is still active. You cannot descend yet.');
   }
 
   const nextIndex = state.encounterIndex + 1;
-  const captures = state.party.captures.length;
   const carryoverPressure =
     state.currentEncounter.pressure +
     Object.values(state.party.beasts).reduce((total, beast) => total + beast.fatigue, 0);
-
-  if (nextIndex >= state.encounterIds.length) {
-    return appendLog(
-      completeExpedition(
-        state,
-        captures >= 2 ? 'strong-success' : captures >= 1 ? 'success' : 'partial-failure'
-      ),
-      'Expedition complete.'
-    );
-  }
 
   const carriedLeaderHealth =
     carryoverPressure > 0 ? Math.max(0, state.party.leader.health - 1) : state.party.leader.health;
@@ -562,12 +569,14 @@ export function advanceEncounter(state) {
     );
   }
 
+  const depth = nextIndex + 1;
+  const beastId = state.encounterIds[nextIndex % state.encounterIds.length];
   const advanced = seedEncounterKnowledge({
     ...state,
     encounterIndex: nextIndex,
     currentEncounter: {
-      target: createTargetState(state.encounterIds[nextIndex], nextIndex + 1),
-      depth: nextIndex + 1,
+      target: createTargetState(beastId, depth),
+      depth,
       anchored: false,
       turn: 1,
       pressure: 0,
@@ -588,5 +597,5 @@ export function advanceEncounter(state) {
     },
   });
 
-  return appendLog(advanced, `Advance to encounter ${nextIndex + 1}.`);
+  return appendLog(advanced, `The expedition descends to layer ${depth}.`);
 }

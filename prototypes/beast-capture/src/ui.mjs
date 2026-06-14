@@ -152,8 +152,10 @@ function renderPartyPicker(fielded, roster, bonds = {}) {
     .map((id) => {
       const name = PLAYER_BEASTS[id]?.name ?? TARGET_BEASTS[id]?.name ?? id;
       const fieldedNow = fielded.includes(id);
-      const bond = CAPTURED_ALLY[id] && (bonds[id] ?? 0) > 0 ? ` (bond ${bonds[id]})` : '';
-      return `<button data-action="toggle-${id}">${name}${bond}: ${fieldedNow ? 'fielded' : 'benched'}</button>`;
+      const ally = CAPTURED_ALLY[id];
+      const bond = ally && (bonds[id] ?? 0) > 0 ? ` (bond ${bonds[id]})` : '';
+      const power = ally ? ` — <em>${ally.passiveName}</em>: ${ally.passiveDesc}` : '';
+      return `<div><button data-action="toggle-${id}">${name}${bond}: ${fieldedNow ? 'fielded' : 'benched'}</button>${power}</div>`;
     })
     .join('');
 }
