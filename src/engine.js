@@ -11,6 +11,17 @@ function appendLog(state, line) {
   return { ...state, log: [...state.log, line] };
 }
 
+// Finish a run: record the result and bank this run's captures into the
+// campaign roster so captured beasts persist across runs.
+function completeExpedition(state, rank) {
+  return {
+    ...state,
+    expeditionComplete: true,
+    result: { rank, captures: state.party.captures.length },
+    roster: [...state.roster, ...state.party.captures],
+  };
+}
+
 // Deterministically spend one use of the most-stocked tool (supply loss, F4).
 function loseSupply(tools) {
   let pick = null;
@@ -151,11 +162,7 @@ function resolveEncounterPressure(state) {
 
       if (woundedLeader.health <= 0) {
         return appendLog(
-          {
-            ...next,
-            expeditionComplete: true,
-            result: { rank: 'expedition-failure', captures: next.party.captures.length },
-          },
+          completeExpedition(next, 'expedition-failure'),
           'The leader falls. The expedition fails.'
         );
       }
@@ -465,14 +472,10 @@ export function advanceEncounter(state) {
 
   if (nextIndex >= state.encounterIds.length) {
     return appendLog(
-      {
-        ...state,
-        expeditionComplete: true,
-        result: {
-          rank: captures >= 2 ? 'strong-success' : captures >= 1 ? 'success' : 'partial-failure',
-          captures,
-        },
-      },
+      completeExpedition(
+        state,
+        captures >= 2 ? 'strong-success' : captures >= 1 ? 'success' : 'partial-failure'
+      ),
       'Expedition complete.'
     );
   }
@@ -482,12 +485,10 @@ export function advanceEncounter(state) {
 
   if (carriedLeaderHealth <= 0) {
     return appendLog(
-      {
-        ...state,
-        expeditionComplete: true,
-        result: { rank: 'expedition-failure', captures },
-        party: { ...state.party, leader: { ...state.party.leader, health: 0 } },
-      },
+      completeExpedition(
+        { ...state, party: { ...state.party, leader: { ...state.party.leader, health: 0 } } },
+        'expedition-failure'
+      ),
       'The leader does not recover from the descent. The expedition fails.'
     );
   }

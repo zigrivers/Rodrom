@@ -29,6 +29,8 @@ export function createInitialState(options = {}) {
 
   return {
     started: options.started ?? true,
+    // Campaign-level roster of captured beasts, carried across runs.
+    roster: options.roster ?? [],
     encounterIds,
     encounterIndex: 0,
     log: ['Expedition begins.'],
