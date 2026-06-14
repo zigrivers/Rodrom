@@ -104,15 +104,15 @@ test('veil lynx conceals its attunement until scent-read reveals it', () => {
   assert.deepEqual(s.party.captures, ['veil-lynx']);
 });
 
-test('run variation builds different encounter orders, always tutorial-first and sometimes the veil lynx', () => {
-  const a = buildEncounterOrder(0);
-  const b = buildEncounterOrder(1);
+// cme.6 — run variety: the fixed tutorial opener is reserved for the first run;
+// later runs rotate the full pool so any quarry can open.
+test('the opener is fixed only on the first run; later runs vary it', () => {
+  assert.equal(buildEncounterOrder(0, true)[0], 'ashwing-moth'); // run 1 = gentle tutorial
 
-  assert.notDeepEqual(a, b);
-  assert.equal(a[0], 'ashwing-moth');
-  assert.equal(b[0], 'ashwing-moth');
-  const everShowsVeil = [0, 1, 2].some((variant) => buildEncounterOrder(variant).includes('veil-lynx'));
-  assert.ok(everShowsVeil);
+  const openers = [0, 1, 2, 3].map((v) => buildEncounterOrder(v, false)[0]);
+  assert.ok(new Set(openers).size > 1, 'opener should vary across runs');
+  assert.ok(openers.some((o) => o !== 'ashwing-moth'), 'opener need not be the tutorial beast');
+  assert.ok(buildEncounterOrder(0, false).includes('veil-lynx'), 'deception beast appears in rotation');
 });
 
 test('a completed run earns lore from captures and depth reached', () => {
@@ -693,6 +693,38 @@ test('deeper layers carry a higher starting pressure (depth ambush)', () => {
   assert.equal(startingPressure(2), 0);
   assert.equal(startingPressure(3), 1);
   assert.equal(startingPressure(5), 2);
+});
+
+// cme.6 — run omens: a run-level modifier picked at the start that changes how
+// the run plays (the shelved Entry Oracle concept).
+test('the Restless Deep omen raises the starting pressure of every layer', () => {
+  const calm = createInitialState({ encounterIds: ['chain-maw'] });
+  assert.equal(calm.currentEncounter.pressure, 0);
+
+  const restless = createInitialState({ encounterIds: ['chain-maw'], omen: 'restless-deep' });
+  assert.equal(restless.currentEncounter.pressure, 1);
+  assert.equal(restless.omen.name, 'Restless Deep');
+});
+
+test('the Bountiful Vein omen adds bonus Lore per capture', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0, omen: 'bountiful-vein' });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s); // clean + fast
+  s = extractExpedition(s);
+  // base 4 + capture bonus 3 + omen (2 per capture * 1) = 9
+  assert.equal(s.result.loreEarned, 9);
+});
+
+test('the Thin Veil omen pre-reveals the opening quarry attunement', () => {
+  const s = createInitialState({ encounterIds: ['chain-maw'], omen: 'thin-veil' });
+  assert.ok(s.codexHints['chain-maw']?.includes('iron'));
+});
+
+test('an unknown omen id is treated as no omen', () => {
+  const s = createInitialState({ encounterIds: ['chain-maw'], omen: 'not-a-real-omen' });
+  assert.equal(s.omen, null);
+  assert.equal(s.currentEncounter.pressure, 0);
 });
 
 test('descending into a deeper layer starts it already under pressure', () => {
