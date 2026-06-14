@@ -217,6 +217,31 @@ test('relentless reckless pressure can lose the leader and fail the expedition',
   assert.equal(s.result.rank, 'expedition-failure');
 });
 
+test('a staked snare line holds the beast so bad reads cannot make it flee', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyToolAction(s, 'snare-line');
+  s = applyHeroProbe(s, 'stone');
+  s = applyHeroProbe(s, 'stone');
+  s = applyHeroProbe(s, 'stone');
+  s = applyHeroProbe(s, 'stone');
+
+  assert.notEqual(s.currentEncounter.target.captureState, 'escaped');
+});
+
+test('a staked snare line holds an open capture window from decaying', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyToolAction(s, 'snare-line');
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+
+  s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
+  s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
+  s = applyCompanionAction(s, 'grave-hound', 'warning-bark');
+
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+});
+
 test('withdrawing resolves the encounter without a capture and spares the party', () => {
   let s = createInitialState({ encounterIds: ['storm-antler'] });
   s = applyHeroProbe(s, 'storm');

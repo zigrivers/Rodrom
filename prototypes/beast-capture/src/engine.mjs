@@ -172,7 +172,7 @@ function resolveEncounterPressure(state) {
 function decayCaptureWindow(state) {
   const enc = state.currentEncounter;
   const target = enc.target;
-  if (target.captureState !== 'bindable') {
+  if (target.captureState !== 'bindable' || enc.flags.snared) {
     return state;
   }
 
@@ -221,7 +221,7 @@ export function applyHeroProbe(state, attunement) {
     attunementMatch: enc.flags.attunementMatch || matched,
   };
   const escapeProgress = matched ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
-  const escaped = !matched && escapeProgress >= ESCAPE_READS;
+  const escaped = !matched && escapeProgress >= ESCAPE_READS && !enc.flags.snared;
 
   const updatedTarget = { ...target };
   updatedTarget.captureState = escaped ? 'escaped' : deriveCaptureState(updatedTarget, flags);
@@ -265,11 +265,18 @@ export function applyToolAction(state, toolId) {
   const def = beastDef(target);
   const triggersPosture = def.postureTrigger.type === 'tool' && def.postureTrigger.toolId === toolId;
 
+  const flags = toolId === 'snare-line' ? { ...enc.flags, snared: true } : enc.flags;
   const updatedTarget = { ...target };
   if (triggersPosture) {
     updatedTarget.posture = def.bindPosture;
   }
-  updatedTarget.captureState = deriveCaptureState(updatedTarget, enc.flags);
+  updatedTarget.captureState = deriveCaptureState(updatedTarget, flags);
+
+  const line = triggersPosture
+    ? `Placed ${toolId}; ${target.name} is ${def.bindPosture}.`
+    : toolId === 'snare-line'
+      ? `Staked a snare-line; ${target.name} cannot flee while it holds.`
+      : `Placed ${toolId}.`;
 
   return finalizeEncounterAction(
     {
@@ -282,9 +289,10 @@ export function applyToolAction(state, toolId) {
         ...enc,
         structures: [...enc.structures, toolId],
         target: updatedTarget,
+        flags,
       },
     },
-    triggersPosture ? `Placed ${toolId}; ${target.name} is ${def.bindPosture}.` : `Placed ${toolId}.`
+    line
   );
 }
 
