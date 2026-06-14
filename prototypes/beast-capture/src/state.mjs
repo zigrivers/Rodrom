@@ -1,14 +1,15 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
 
-export function createTargetState(targetId) {
+export function createTargetState(targetId, depth = 1) {
   const target = TARGET_BEASTS[targetId];
+  const maxHealth = target.maxHealth + (depth - 1);
   return {
     id: target.id,
     name: target.name,
     primaryAttunement: target.primaryAttunement,
     falseLead: target.falseLead,
-    health: target.maxHealth,
-    maxHealth: target.maxHealth,
+    health: maxHealth,
+    maxHealth,
     posture: target.initialPosture,
     captureState: target.initialCaptureState,
   };
@@ -105,7 +106,8 @@ export function createInitialState(options = {}) {
       captures: [],
     },
     currentEncounter: {
-      target: createTargetState(encounterIds[0]),
+      target: createTargetState(encounterIds[0], 1),
+      depth: 1,
       turn: 1,
       pressure: 0,
       riskLevel: 0,
