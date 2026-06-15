@@ -183,7 +183,7 @@ function renderHaulRisk(state) {
   if (atRisk <= 0) {
     return state.party.captures.length > 0 ? '<p>Haul: all secured.</p>' : '';
   }
-  return `<p class="at-risk">Haul at risk: ${atRisk} unsecured capture${atRisk === 1 ? '' : 's'} — Anchor or Extract to keep ${atRisk === 1 ? 'it' : 'them'}.</p>`;
+  return `<p class="at-risk">Haul at risk: ${atRisk} unsecured capture${atRisk === 1 ? '' : 's'} — Secure or Extract to keep ${atRisk === 1 ? 'it' : 'them'}.</p>`;
 }
 
 // Coach toggle (cme.3): on = step-by-step guidance (teaches); off = oblique

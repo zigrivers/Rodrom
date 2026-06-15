@@ -594,6 +594,29 @@ test('dying forfeits unsecured captures but keeps anchored (secured) ones', () =
   assert.equal(s.result.forfeited, 1);
 });
 
+test('dying after choosing Recover (not Secure) forfeits the unsecured haul', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'storm-antler'] });
+  // Layer 1: capture Ashwing, then RECOVER (heals, does NOT secure)
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = recoverAtLayer(s);
+  assert.equal(s.securedCount, 0, 'recover heals but does not secure');
+  s = advanceEncounter(s); // depth 2: Chain Maw
+
+  // Layer 2: capture Chain Maw (also unsecured), building carryover for a fatal descent
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+
+  s = { ...s, party: { ...s.party, leader: { ...s.party.leader, health: 1 } } };
+  s = advanceEncounter(s); // fatal descent
+
+  assert.equal(s.result.rank, 'expedition-failure');
+  assert.ok(!s.roster.includes('ashwing-moth'), 'recovered-but-unsecured capture is forfeited');
+  assert.equal(s.result.forfeited, 2);
+});
+
 test('extracting secures the whole haul, even captures made after the last anchor', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth'] });
   s = applyHeroProbe(s, 'ash');
