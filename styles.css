@@ -81,6 +81,16 @@ body {
   font-weight: bold;
 }
 
+.elite-badge {
+  font-size: 0.6em;
+  vertical-align: middle;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #1a1208;
+  letter-spacing: 0.08em;
+}
+
 button {
   width: 100%;
   padding: 10px 12px;

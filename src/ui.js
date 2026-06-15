@@ -1,6 +1,6 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.js';
 import { canAdvanceEncounter, tensionLabel } from './engine.js';
-import { upgradeCost, UPGRADES } from './state.js';
+import { upgradeCost, UPGRADES, fieldCap } from './state.js';
 
 export function renderApp(state) {
   if (!state.started) {
@@ -16,7 +16,7 @@ export function renderApp(state) {
         ${renderTownUpgrades(state)}
         <h3>Party — who do you field?</h3>
         <p>Each beast brings different actions, so your party decides which captures are even possible.</p>
-        ${renderPartyPicker(state.fielded, state.roster, state.bonds)}
+        ${renderPartyPicker(state.fielded, state.roster, state.bonds, fieldCap(state.upgrades))}
         ${renderCoachToggle(state)}
         <button data-action="start-expedition">Start Expedition</button>
       </section>
@@ -65,7 +65,7 @@ export function renderApp(state) {
     <div class="layout">
       <section class="panel">
         <h1>Spiral Descent</h1>
-        <h2>${target.name}</h2>
+        <h2>${target.name}${target.elite ? ' <span class="elite-badge">ELITE</span>' : ''}</h2>
         <p class="guidance">${captureGuidance(state)}</p>
         <div class="stats">
           ${state.omen ? `<p class="omen">Omen: <strong>${state.omen.name}</strong> — ${state.omen.desc}</p>` : ''}
@@ -208,18 +208,23 @@ function renderTownUpgrades(state) {
     .join('');
 }
 
-function renderPartyPicker(fielded, roster, bonds = {}) {
+function renderPartyPicker(fielded, roster, bonds = {}, cap = 4) {
   const ids = ['grave-hound', 'mireback-tortoise', ...new Set(roster ?? [])];
-  return ids
+  const full = fielded.length >= cap;
+  const header = `<p>Party: ${fielded.length}/${cap} fielded${full ? ' — full (bench one to swap)' : ''}</p>`;
+  const rows = ids
     .map((id) => {
       const name = PLAYER_BEASTS[id]?.name ?? TARGET_BEASTS[id]?.name ?? id;
       const fieldedNow = fielded.includes(id);
       const ally = CAPTURED_ALLY[id];
       const bond = ally && (bonds[id] ?? 0) > 0 ? ` (bond ${bonds[id]})` : '';
       const power = ally ? ` — <em>${ally.passiveName}</em>: ${ally.passiveDesc}` : '';
-      return `<div><button data-action="toggle-${id}">${name}${bond}: ${fieldedNow ? 'fielded' : 'benched'}</button>${power}</div>`;
+      // At the cap, benched beasts can't be fielded until you bench another.
+      const blocked = full && !fieldedNow;
+      return `<div><button data-action="toggle-${id}" ${renderDisabled(blocked)}>${name}${bond}: ${fieldedNow ? 'fielded' : 'benched'}</button>${power}</div>`;
     })
     .join('');
+  return `${header}${rows}`;
 }
 
 function renderRoster(roster) {
