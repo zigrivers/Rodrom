@@ -197,15 +197,17 @@ function isConcealedNow(target) {
   return Boolean(def.concealed) && target.posture !== def.bindPosture;
 }
 
-// Returns { matched, reacts }. `matched` means a true positive read that
-// progresses capture; `reacts` controls the "reacts"/"rejects" log wording.
+// Returns { matched, altMatched, reacts }. `matched` means a true positive read
+// on the primary route; `altMatched` means a valid read on the alt route;
+// `reacts` controls the "reacts"/"rejects" log wording.
 function evaluateProbe(target, attunement) {
   const def = beastDef(target);
   if (isConcealedNow(target)) {
-    return { matched: false, reacts: attunement === def.falseLead };
+    return { matched: false, altMatched: false, reacts: attunement === def.falseLead };
   }
   const matched = attunement === target.primaryAttunement;
-  return { matched, reacts: matched };
+  const altMatched = Boolean(target.altBind) && attunement === target.altBind.attunement;
+  return { matched, altMatched, reacts: matched || altMatched };
 }
 
 // Capture state is derived from the two requirements, never set imperatively
@@ -336,18 +338,20 @@ export function applyHeroProbe(state, attunement) {
 
   const enc = state.currentEncounter;
   const target = enc.target;
-  const { matched, reacts } = evaluateProbe(target, attunement);
+  const { matched, altMatched, reacts } = evaluateProbe(target, attunement);
+  const read = matched || altMatched;
 
   const flags = {
     ...enc.flags,
     attunementMatch: enc.flags.attunementMatch || matched,
+    altAttunementMatch: enc.flags.altAttunementMatch || altMatched,
   };
   const passives = activePassives(state);
   const escapeTolerance = ESCAPE_READS + ('skittish-kin' in passives ? 1 + passives['skittish-kin'] : 0);
-  const escapeProgress = matched ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
+  const escapeProgress = read ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
   // A deeply-bonded Iron Hold ally (G2) also pins the quarry so it cannot flee.
   const ironGrip = passives['iron-hold'] !== undefined && passives['iron-hold'] >= 3;
-  const escaped = !matched && escapeProgress >= escapeTolerance && !enc.flags.snared && !ironGrip;
+  const escaped = !read && escapeProgress >= escapeTolerance && !enc.flags.snared && !ironGrip;
 
   const updatedTarget = { ...target };
   updatedTarget.captureState = escaped ? 'escaped' : deriveCaptureState(updatedTarget, flags);
@@ -358,7 +362,7 @@ export function applyHeroProbe(state, attunement) {
 
   const baseState = {
     ...state,
-    codexHints: matched ? addHint(state.codexHints, target.id, attunement) : state.codexHints,
+    codexHints: read ? addHint(state.codexHints, target.id, attunement) : state.codexHints,
     currentEncounter: { ...enc, target: updatedTarget, flags, escapeProgress },
   };
 

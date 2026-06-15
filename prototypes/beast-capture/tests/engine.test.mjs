@@ -1126,3 +1126,21 @@ test('dual-path altBind activates only for non-concealed elites', () => {
   const direVeil = createTargetState('veil-lynx', 4); // concealed -> excluded
   assert.equal(direVeil.altBind, null, 'concealed elite stays single-path');
 });
+
+test('probing the alt attunement on a Dire beast reads as a valid alt match', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'storm'); // alt attunement for Dire Chain Maw
+
+  assert.equal(s.currentEncounter.flags.altAttunementMatch, true, 'alt read registered');
+  assert.equal(s.currentEncounter.escapeProgress ?? 0, 0, 'a valid alt read is not a wrong read');
+  assert.ok((s.codexHints['chain-maw'] ?? []).includes('storm'), 'alt read recorded as a clue');
+});
+
+test('probing that same attunement on a NON-elite beast is still a wrong read', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] }); // depth 1, not elite, altBind null
+  s = applyHeroProbe(s, 'storm'); // wrong for a normal Chain Maw (it answers to iron)
+
+  assert.equal(s.currentEncounter.flags.altAttunementMatch, false);
+  assert.equal(s.currentEncounter.escapeProgress, 1, 'wrong read raises escape risk');
+});
