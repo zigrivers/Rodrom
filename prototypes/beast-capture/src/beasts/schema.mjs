@@ -27,6 +27,48 @@ const REQUIRED = [
   'bindPosture', 'initialPosture', 'initialCaptureState', 'maxHealth', 'stratum',
 ];
 
+// Fill optional fields with defaults; strip the non-schema `expand` directive (used only by
+// the roster generator). falseLead defaults to the attunement's confusion-pair twin.
+export function normalizeBeast(raw) {
+  const { expand, ...b } = raw;
+  const primary = b.primaryAttunement;
+  return {
+    id: b.id, name: b.name, genus: b.genus,
+    rank: b.rank ?? 'quarry',
+    evolutionLine: b.evolutionLine ?? b.id,
+    stage: b.stage ?? 1,
+    baseSpeciesId: b.baseSpeciesId ?? null,
+    authored: b.authored ?? true,
+    primaryAttunement: primary,
+    secondaryAttunement: b.secondaryAttunement ?? null,
+    falseLead: b.falseLead ?? PAIR_TWIN[primary] ?? null,
+    concealed: b.concealed ?? false,
+    concealSurface: b.concealSurface ?? null,
+    behaviorArchetype: b.behaviorArchetype ?? 'lurker',
+    maxHealth: b.maxHealth,
+    initialPosture: b.initialPosture,
+    bindKind: b.bindKind,
+    bindPosture: b.bindPosture,
+    altBind: b.altBind ?? null,
+    initialCaptureState: b.initialCaptureState ?? 'unreadable',
+    captureDifficulty: b.captureDifficulty ?? 1,
+    onKillHazard: b.onKillHazard ?? 'none',
+    exposeToRead: b.exposeToRead ?? false,
+    tierBronze: b.tierBronze ?? 'caught',
+    tierSilver: b.tierSilver ?? 'clean',
+    tierGold: b.tierGold ?? 'dire',
+    depthBand: b.depthBand ?? [1, 99],
+    stratum: b.stratum,
+    spawnWeight: b.spawnWeight ?? 50,
+    rarity: b.rarity ?? 'common',
+    alliedActionKind: b.alliedActionKind ?? null,
+    alliedPassive: b.alliedPassive ?? null,
+    blurb: b.blurb ?? '',
+    artDescriptors: b.artDescriptors ?? [],
+    tellDescriptor: b.tellDescriptor ?? '',
+  };
+}
+
 // Returns an array of human-readable error strings; empty array means valid.
 export function validateBeast(b) {
   const errs = [];
