@@ -20,6 +20,7 @@ export function createTargetState(targetId, depth = 1) {
     maxHealth,
     posture: target.initialPosture,
     captureState: target.initialCaptureState,
+    altBind: elite && !target.concealed ? target.altBind ?? null : null,
   };
 }
 
@@ -237,9 +238,11 @@ export function createInitialState(options = {}) {
       structures: [],
       flags: {
         attunementMatch: false,
+        altAttunementMatch: false,
         guardRaised: false,
         braceRaised: false,
         alerted: false,
+        agitated: false,
       },
     },
   };

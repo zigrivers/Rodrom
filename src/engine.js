@@ -21,6 +21,9 @@ const ELITE_LORE = 4;
 // Press-your-luck (greed): each press level banked on a capture is worth this
 // much bonus Lore; a catch pressed to level 2+ also deepens that species' bond.
 const PRESS_LORE = 2;
+// A "bold" capture of a dual-path elite (adaptive-read) — the daring, agitating
+// route — is worth this much bonus Lore and deepens that species' bond.
+const BOLD_CAPTURE_LORE = 2;
 
 // Deeper layers press harder: per-turn pressure rises with descent depth, so
 // frenzy and failure scale with depth (run structure, t9i.3).
@@ -105,17 +108,27 @@ function completeExpedition(state, rank) {
       bonds[id] = (bonds[id] ?? 0) + 1;
     }
   }
+  // Bold-route capture of a dual-path elite (adaptive-read): a daring catch pays
+  // bonus Lore and deepens the bond.
+  let boldLore = 0;
+  for (let i = 0; i < bankedGrades.length; i += 1) {
+    if (bankedGrades[i].route === 'bold') {
+      boldLore += BOLD_CAPTURE_LORE;
+      const id = bankedCaptures[i];
+      bonds[id] = (bonds[id] ?? 0) + 1;
+    }
+  }
   const captures = bankedCaptures.length;
   const cleanCaptures = bankedGrades.filter((grade) => grade.clean).length;
   const eliteCaptures = bankedGrades.filter((grade) => grade.elite).length;
   const omenLore = (state.omen?.lorePerCapture ?? 0) * captures;
   const dupeLore = dupesFused * DUPE_CONVERT_LORE;
   const eliteLore = eliteCaptures * ELITE_LORE;
-  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore;
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore + boldLore;
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, forfeited },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, boldLore, forfeited },
     roster,
     bonds,
     lore: (state.lore ?? 0) + loreEarned,
@@ -197,15 +210,34 @@ function isConcealedNow(target) {
   return Boolean(def.concealed) && target.posture !== def.bindPosture;
 }
 
-// Returns { matched, reacts }. `matched` means a true positive read that
-// progresses capture; `reacts` controls the "reacts"/"rejects" log wording.
+// Returns { matched, altMatched, reacts }. `matched` means a true positive read
+// on the primary route; `altMatched` means a valid read on the alt route;
+// `reacts` controls the "reacts"/"rejects" log wording.
 function evaluateProbe(target, attunement) {
   const def = beastDef(target);
   if (isConcealedNow(target)) {
-    return { matched: false, reacts: attunement === def.falseLead };
+    return { matched: false, altMatched: false, reacts: attunement === def.falseLead };
   }
   const matched = attunement === target.primaryAttunement;
-  return { matched, reacts: matched };
+  const altMatched = Boolean(target.altBind) && attunement === target.altBind.attunement;
+  return { matched, altMatched, reacts: matched || altMatched };
+}
+
+// Which bind route an action of `kind` serves on this target, honoring the
+// active alt route on dual-path elites (adaptive-read). Returns the posture to
+// drive and whether it's the 'bold' (primary) or 'patient' (alt) route, or null.
+function routeForKind(target, kind) {
+  if (kind == null) {
+    return null;
+  }
+  const def = beastDef(target);
+  if (kind === def.bindKind) {
+    return { posture: def.bindPosture, route: 'bold' };
+  }
+  if (target.altBind && kind === target.altBind.bindKind) {
+    return { posture: target.altBind.bindPosture, route: 'patient' };
+  }
+  return null;
 }
 
 // Capture state is derived from the two requirements, never set imperatively
@@ -215,17 +247,24 @@ function deriveCaptureState(target, flags) {
     return target.captureState;
   }
   const def = beastDef(target);
-  const postureReady = target.posture === def.bindPosture;
-  if (flags.attunementMatch && postureReady) {
+  const boldReady = flags.attunementMatch && target.posture === def.bindPosture;
+  const patientReady =
+    Boolean(target.altBind) && flags.altAttunementMatch && target.posture === target.altBind.bindPosture;
+  if (boldReady || patientReady) {
     return 'bindable';
   }
-  if (flags.attunementMatch || postureReady) {
+  const anyAttunement = flags.attunementMatch || flags.altAttunementMatch;
+  const anyPosture =
+    target.posture === def.bindPosture || (target.altBind && target.posture === target.altBind.bindPosture);
+  if (anyAttunement || anyPosture) {
     return 'probed';
   }
   return 'unreadable';
 }
 
 function consumeDefenseFlags(flags) {
+  // Note: `agitated` (bold-route, adaptive-read) is a standing condition for the
+  // rest of the encounter — intentionally NOT consumed here, unlike guard/brace.
   return {
     ...flags,
     guardRaised: false,
@@ -260,7 +299,9 @@ function resolveEncounterPressure(state) {
     // Grounding Aura (cme.2) scales its relief with bond depth (G2).
     const groundingBond = activePassives(state)['grounding-aura'];
     const grounding = groundingBond === undefined ? 0 : 1 + Math.floor(groundingBond / 2);
-    const newPressure = enc.pressure + Math.max(0, pressurePerTurn(enc.depth) - grounding);
+    // The bold route on a dual-path elite leaves the quarry agitated (adaptive-read).
+    const agitation = flags.agitated ? 1 : 0;
+    const newPressure = enc.pressure + Math.max(0, pressurePerTurn(enc.depth) + agitation - grounding);
     next = { ...next, currentEncounter: { ...next.currentEncounter, pressure: newPressure } };
 
     if (newPressure >= FRENZY_PRESSURE) {
@@ -336,18 +377,20 @@ export function applyHeroProbe(state, attunement) {
 
   const enc = state.currentEncounter;
   const target = enc.target;
-  const { matched, reacts } = evaluateProbe(target, attunement);
+  const { matched, altMatched, reacts } = evaluateProbe(target, attunement);
+  const read = matched || altMatched;
 
   const flags = {
     ...enc.flags,
     attunementMatch: enc.flags.attunementMatch || matched,
+    altAttunementMatch: enc.flags.altAttunementMatch || altMatched,
   };
   const passives = activePassives(state);
   const escapeTolerance = ESCAPE_READS + ('skittish-kin' in passives ? 1 + passives['skittish-kin'] : 0);
-  const escapeProgress = matched ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
+  const escapeProgress = read ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
   // A deeply-bonded Iron Hold ally (G2) also pins the quarry so it cannot flee.
   const ironGrip = passives['iron-hold'] !== undefined && passives['iron-hold'] >= 3;
-  const escaped = !matched && escapeProgress >= escapeTolerance && !enc.flags.snared && !ironGrip;
+  const escaped = !read && escapeProgress >= escapeTolerance && !enc.flags.snared && !ironGrip;
 
   const updatedTarget = { ...target };
   updatedTarget.captureState = escaped ? 'escaped' : deriveCaptureState(updatedTarget, flags);
@@ -358,7 +401,7 @@ export function applyHeroProbe(state, attunement) {
 
   const baseState = {
     ...state,
-    codexHints: matched ? addHint(state.codexHints, target.id, attunement) : state.codexHints,
+    codexHints: read ? addHint(state.codexHints, target.id, attunement) : state.codexHints,
     currentEncounter: { ...enc, target: updatedTarget, flags, escapeProgress },
   };
 
@@ -388,18 +431,22 @@ export function applyToolAction(state, toolId) {
   }
 
   const target = enc.target;
-  const def = beastDef(target);
-  const triggersPosture = TOOL_ACTION_KIND[toolId] != null && TOOL_ACTION_KIND[toolId] === def.bindKind;
+  const drive = routeForKind(target, TOOL_ACTION_KIND[toolId]);
+  const triggersPosture = drive != null;
 
-  const flags = toolId === 'snare-line' ? { ...enc.flags, snared: true } : enc.flags;
+  const flags = toolId === 'snare-line' ? { ...enc.flags, snared: true } : { ...enc.flags };
   const updatedTarget = { ...target };
   if (triggersPosture) {
-    updatedTarget.posture = def.bindPosture;
+    updatedTarget.posture = drive.posture;
+    if (drive.route === 'bold' && target.altBind) {
+      flags.agitated = true;
+    }
   }
   updatedTarget.captureState = deriveCaptureState(updatedTarget, flags);
 
+  const agitate = triggersPosture && drive.route === 'bold' && target.altBind ? ' Forcing it agitates the quarry.' : '';
   const line = triggersPosture
-    ? `Placed ${toolId}; ${target.name} is ${def.bindPosture}.`
+    ? `Placed ${toolId}; ${target.name} is ${drive.posture}.${agitate}`
     : toolId === 'snare-line'
       ? `Staked a snare-line; ${target.name} cannot flee while it holds.`
       : `Placed ${toolId}.`;
@@ -434,10 +481,10 @@ export function applyCompanionAction(state, beastId, actionId) {
 
   const enc = state.currentEncounter;
   const target = enc.target;
-  const def = beastDef(target);
 
   const kind = COMPANION_ACTION_KIND[actionId] ?? null;
-  const triggersPosture = kind != null && kind === def.bindKind;
+  const drive = routeForKind(target, kind);
+  const triggersPosture = drive != null;
 
   const updatedTarget = { ...target };
   let flags = { ...enc.flags };
@@ -445,18 +492,22 @@ export function applyCompanionAction(state, beastId, actionId) {
   let line = `${beast.name} uses ${actionId}.`;
 
   if (triggersPosture) {
-    updatedTarget.posture = def.bindPosture;
+    updatedTarget.posture = drive.posture;
+    if (drive.route === 'bold' && target.altBind) {
+      flags.agitated = true;
+    }
   }
 
   if (kind === 'reveal') {
     // Scent Read / Sense expose the true attunement (and reveal concealed beasts).
     codexHints = addHint(codexHints, target.id, target.primaryAttunement);
     line = triggersPosture
-      ? `${beast.name} flushes out ${target.name}: it responds to ${target.primaryAttunement}, now ${def.bindPosture}.`
+      ? `${beast.name} flushes out ${target.name}: it responds to ${target.primaryAttunement}, now ${drive.posture}.`
       : `${beast.name} reads ${target.name}: it responds to ${target.primaryAttunement}.`;
   } else if (triggersPosture) {
-    const verb = kind === 'corner' ? 'into a corner' : kind === 'stagger' ? 'off balance' : 'to the ground';
-    line = `${beast.name} forces ${target.name} ${verb}; it is ${def.bindPosture}.`;
+    const verb = drive.posture === 'cornered' ? 'into a corner' : drive.posture === 'staggered' ? 'off balance' : 'to the ground';
+    const agitate = drive.route === 'bold' && target.altBind ? ' Forcing it agitates the quarry.' : '';
+    line = `${beast.name} forces ${target.name} ${verb}; it is ${drive.posture}.${agitate}`;
   } else if (actionId === 'warning-bark') {
     flags.guardRaised = true;
     line = `${beast.name} barks a warning; the expedition steadies.`;
@@ -565,10 +616,16 @@ export function attemptCapture(state) {
   const fast = enc.turn <= FAST_CAPTURE_TURNS;
   const flourish = clean && fast ? ' — a clean, swift bind.' : clean ? ' — cleanly bound.' : fast ? ' — a swift bind.' : '.';
 
+  const def = beastDef(target);
+  let route = null;
+  if (target.altBind) {
+    route = enc.flags.attunementMatch && target.posture === def.bindPosture ? 'bold' : 'patient';
+  }
+
   return finalizeEncounterAction(
     {
       ...state,
-      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast, elite: target.elite === true, pressLevel: enc.pressLevel ?? 0 }],
+      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast, elite: target.elite === true, pressLevel: enc.pressLevel ?? 0, route }],
       party: {
         ...state.party,
         captures: [...state.party.captures, target.id],
@@ -718,9 +775,11 @@ export function advanceEncounter(state) {
       structures: [],
       flags: {
         attunementMatch: false,
+        altAttunementMatch: false,
         guardRaised: false,
         braceRaised: false,
         alerted: carryoverPressure > 0,
+        agitated: false,
       },
     },
     party: {
