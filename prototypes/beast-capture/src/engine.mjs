@@ -517,6 +517,24 @@ export function applyGuardAction(state) {
   );
 }
 
+// Press-your-luck (greed): hold the open window one more turn for a richer
+// catch. The turn resolves normally, so window-decay (may slip) and pressure
+// (may frenzy) both apply. The reward is banked when you finally bind.
+export function pressCapture(state) {
+  if (isResolvedEncounter(state)) {
+    return state;
+  }
+  const enc = state.currentEncounter;
+  if (enc.target.captureState !== 'bindable') {
+    return finalizeEncounterAction(state, `${enc.target.name} is not ready to bind.`);
+  }
+  const pressed = {
+    ...state,
+    currentEncounter: { ...enc, pressLevel: (enc.pressLevel ?? 0) + 1 },
+  };
+  return finalizeEncounterAction(pressed, `You press the hold on ${enc.target.name}, risking more for a richer catch.`);
+}
+
 export function attemptCapture(state) {
   if (isResolvedEncounter(state)) {
     return state;

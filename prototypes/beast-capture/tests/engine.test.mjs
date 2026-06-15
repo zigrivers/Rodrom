@@ -21,6 +21,7 @@ import {
   attemptCapture,
   canAdvanceEncounter,
   extractExpedition,
+  pressCapture,
   pressurePerTurn,
   recoverAtLayer,
   secureHaul,
@@ -1008,4 +1009,24 @@ test('recoverAtLayer heals and sheds fatigue without securing', () => {
   assert.equal(s.party.beasts['grave-hound'].fatigue, 0, 'fatigue shed (was 1, -2 floored at 0)');
   assert.equal(s.securedCount, 0, 'haul NOT secured');
   assert.equal(s.currentEncounter.anchored, true, 'consumes the layer anchor');
+});
+
+test('pressing a bindable target raises press level and spends a turn', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // -> bindable
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+  const turnBefore = s.currentEncounter.turn;
+
+  s = pressCapture(s);
+
+  assert.equal(s.currentEncounter.pressLevel, 1, 'press level up');
+  assert.equal(s.currentEncounter.turn, turnBefore + 1, 'a turn was spent');
+});
+
+test('pressing a target that is not bindable does not raise press level', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron'); // probed but not yet bindable (no posture)
+  s = pressCapture(s);
+  assert.equal(s.currentEncounter.pressLevel, 0);
 });
