@@ -1,7 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createInitialState, buildEncounterOrder, buyUpgrade, upgradeCost } from '../src/state.mjs';
+import {
+  createInitialState,
+  buildEncounterOrder,
+  buyUpgrade,
+  upgradeCost,
+  toggleFielded,
+  FIELD_CAP,
+} from '../src/state.mjs';
 import {
   advanceEncounter,
   anchorExpedition,
@@ -234,6 +241,23 @@ test('Skittish Kin: a fielded Ashwing ally raises the escape tolerance', () => {
   withKin = applyHeroProbe(withKin, 'stone');
   withKin = applyHeroProbe(withKin, 'stone');
   assert.notEqual(withKin.currentEncounter.target.captureState, 'escaped');
+});
+
+// G3a — a field cap makes composition a real trade-off: with a full roster you
+// must choose which passives to bring, not field everything.
+test('fielding is capped so composition is a real choice', () => {
+  assert.equal(FIELD_CAP, 4);
+  const full = ['grave-hound', 'mireback-tortoise', 'chain-maw', 'veil-lynx']; // == FIELD_CAP
+
+  // at the cap, fielding another is a no-op
+  assert.equal(toggleFielded(full, 'storm-antler').length, 4);
+  assert.ok(!toggleFielded(full, 'storm-antler').includes('storm-antler'));
+
+  // benching always works, even at the cap
+  assert.deepEqual(toggleFielded(full, 'chain-maw'), ['grave-hound', 'mireback-tortoise', 'veil-lynx']);
+
+  // under the cap, fielding works
+  assert.deepEqual(toggleFielded(['grave-hound'], 'chain-maw'), ['grave-hound', 'chain-maw']);
 });
 
 test('fielding a subset of beasts omits the unfielded ones from the party', () => {

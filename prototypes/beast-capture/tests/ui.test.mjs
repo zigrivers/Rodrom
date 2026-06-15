@@ -73,6 +73,19 @@ test('the party picker lists captured roster beasts as fieldable', () => {
   assert.match(html, /data-action="toggle-ashwing-moth"/);
 });
 
+test('the party picker shows the field cap and blocks over-cap fielding (G3a)', () => {
+  const html = renderApp(
+    createInitialState({
+      started: false,
+      fielded: ['grave-hound', 'mireback-tortoise', 'chain-maw', 'veil-lynx'],
+      roster: ['chain-maw', 'veil-lynx', 'storm-antler'],
+    })
+  );
+  assert.match(html, /4\s*\/\s*4/); // party full indicator
+  // a benched, over-cap beast's field button is disabled
+  assert.match(html, /data-action="toggle-storm-antler"[^>]*disabled/);
+});
+
 test('the party picker shows each captured ally its distinct passive power', () => {
   const html = renderApp(createInitialState({ started: false, roster: ['chain-maw'] }));
   assert.match(html, /Iron Hold/);

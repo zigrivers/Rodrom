@@ -31,6 +31,21 @@ export function buildEncounterOrder(variant = 0, firstRun = false) {
 
 // Allied beasts the player can choose to field, with their per-beast health.
 const FIELDABLE = ['grave-hound', 'mireback-tortoise'];
+
+// How many beasts you can field at once (G3a). A full roster (2 starters + 4
+// captured allies) exceeds this, so composition is a real "which passives this
+// run?" choice rather than fielding everything.
+export const FIELD_CAP = 4;
+
+export function toggleFielded(fielded, id, cap = FIELD_CAP) {
+  if (fielded.includes(id)) {
+    return fielded.filter((beastId) => beastId !== id);
+  }
+  if (fielded.length >= cap) {
+    return fielded; // party full — fielding another is a no-op
+  }
+  return [...fielded, id];
+}
 const BEAST_STATS = {
   'grave-hound': { health: 4 },
   'mireback-tortoise': { health: 6 },

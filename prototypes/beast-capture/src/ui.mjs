@@ -1,6 +1,6 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
 import { canAdvanceEncounter, tensionLabel } from './engine.mjs';
-import { upgradeCost, UPGRADES } from './state.mjs';
+import { upgradeCost, UPGRADES, FIELD_CAP } from './state.mjs';
 
 export function renderApp(state) {
   if (!state.started) {
@@ -210,16 +210,21 @@ function renderTownUpgrades(state) {
 
 function renderPartyPicker(fielded, roster, bonds = {}) {
   const ids = ['grave-hound', 'mireback-tortoise', ...new Set(roster ?? [])];
-  return ids
+  const full = fielded.length >= FIELD_CAP;
+  const header = `<p>Party: ${fielded.length}/${FIELD_CAP} fielded${full ? ' — full (bench one to swap)' : ''}</p>`;
+  const rows = ids
     .map((id) => {
       const name = PLAYER_BEASTS[id]?.name ?? TARGET_BEASTS[id]?.name ?? id;
       const fieldedNow = fielded.includes(id);
       const ally = CAPTURED_ALLY[id];
       const bond = ally && (bonds[id] ?? 0) > 0 ? ` (bond ${bonds[id]})` : '';
       const power = ally ? ` — <em>${ally.passiveName}</em>: ${ally.passiveDesc}` : '';
-      return `<div><button data-action="toggle-${id}">${name}${bond}: ${fieldedNow ? 'fielded' : 'benched'}</button>${power}</div>`;
+      // At the cap, benched beasts can't be fielded until you bench another.
+      const blocked = full && !fieldedNow;
+      return `<div><button data-action="toggle-${id}" ${renderDisabled(blocked)}>${name}${bond}: ${fieldedNow ? 'fielded' : 'benched'}</button>${power}</div>`;
     })
     .join('');
+  return `${header}${rows}`;
 }
 
 function renderRoster(roster) {
