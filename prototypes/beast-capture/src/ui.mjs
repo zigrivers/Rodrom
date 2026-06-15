@@ -28,6 +28,11 @@ export function renderApp(state) {
       <section class="panel">
         <h1>Expedition Complete</h1>
         <p>Result: ${state.result.rank}</p>
+        ${
+          state.result.forfeited > 0
+            ? `<p class="at-risk">The leader fell — ${state.result.forfeited} unsecured capture${state.result.forfeited === 1 ? '' : 's'} lost to the deep. Only your anchored haul was saved.</p>`
+            : ''
+        }
         <p>Captures this run: ${state.result.captures}</p>
         <p>Lore earned: ${state.result.loreEarned} (town total: ${state.lore})</p>
         ${
@@ -148,6 +153,7 @@ export function renderApp(state) {
           .map((beast) => `<p>${beast.name} fatigue: ${beast.fatigue}</p>`)
           .join('')}
         <p>Captures: ${renderCaptureNames(state.party.captures)}</p>
+        ${renderHaulRisk(state)}
         <h3>Tool Counts</h3>
         <ul class="summary-list">${renderToolCounts(state.party.tools)}</ul>
         <h3>Placed Structures</h3>
@@ -165,6 +171,16 @@ export function renderApp(state) {
 
 function renderDisabled(disabled) {
   return disabled ? 'disabled' : '';
+}
+
+// Checkpoint stakes (G1): show how much of the haul would be lost on a death,
+// so the Anchor/Extract decision carries real weight.
+function renderHaulRisk(state) {
+  const atRisk = state.party.captures.length - (state.securedCount ?? 0);
+  if (atRisk <= 0) {
+    return state.party.captures.length > 0 ? '<p>Haul: all secured.</p>' : '';
+  }
+  return `<p class="at-risk">Haul at risk: ${atRisk} unsecured capture${atRisk === 1 ? '' : 's'} — Anchor or Extract to keep ${atRisk === 1 ? 'it' : 'them'}.</p>`;
 }
 
 // Coach toggle (cme.3): on = step-by-step guidance (teaches); off = oblique

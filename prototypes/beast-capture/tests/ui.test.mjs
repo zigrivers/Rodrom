@@ -206,6 +206,16 @@ test('learned clues from earlier encounters stay visible during play', () => {
   assert.match(html, /Ashwing Moth: Ash/i);
 });
 
+test('the expedition view shows how much of the haul is still at risk (G1)', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+
+  // one capture, not yet anchored -> it is at risk
+  assert.match(renderApp(s), /at risk/i);
+});
+
 test('an Anchor option appears once a layer is resolved', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
   assert.doesNotMatch(renderApp(s), /data-action="anchor"(?![^>]*disabled)/);
