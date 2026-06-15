@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createInitialState } from '../src/state.mjs';
+import { createInitialState, createTargetState } from '../src/state.mjs';
 import {
   advanceEncounter,
   applyCompanionAction,
@@ -404,4 +404,18 @@ test('a bindable target offers Bind now and Press, with a pressed readout', () =
 test('Press is disabled when the target is not bindable', () => {
   const s = createInitialState({ encounterIds: ['chain-maw'] }); // unreadable, not bindable
   assert.match(renderApp(s), /data-action="press"[^>]*disabled/);
+});
+
+test('the coach surfaces both routes for a dual-path elite', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  const html = renderApp(s);
+  assert.match(html, /two ways in/i);
+  assert.match(html, /bold/i);
+  assert.match(html, /patient/i);
+});
+
+test('single-path beasts keep their normal one-route coaching', () => {
+  const html = renderApp(createInitialState({ encounterIds: ['chain-maw'] })); // depth 1, single-path
+  assert.doesNotMatch(html, /two ways in/i);
 });

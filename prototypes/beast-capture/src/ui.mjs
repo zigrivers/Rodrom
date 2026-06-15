@@ -311,6 +311,9 @@ function obliqueGuidance(state, target) {
   if (target.captureState === 'bindable') {
     return 'The opening is there — if you can see it.';
   }
+  if (target.altBind) {
+    return 'A Dire quarry — it answers two ways. Find them.';
+  }
   const learned = state.codexHints[target.id] ?? [];
   if (learned.includes(target.primaryAttunement)) {
     return `You've learned it answers to ${formatLabel(target.primaryAttunement)}. Drive it from there.`;
@@ -329,6 +332,11 @@ function captureGuidance(state) {
 
   if (target.captureState === 'bindable') {
     return 'Window open — Bind now before it closes.';
+  }
+  if (target.altBind) {
+    const bold = `${formatLabel(target.primaryAttunement)}→${def.bindPosture}`;
+    const patient = `${formatLabel(target.altBind.attunement)}→${target.altBind.bindPosture}`;
+    return `A Dire quarry — two ways in: ${bold} (bold: agitates it, richer) or ${patient} (patient: calm). Read which your party can do.`;
   }
   if (def.concealed && target.posture !== def.bindPosture) {
     return `${target.name} masks its true nature. Use Grave Hound: Scent Read to reveal it.`;
