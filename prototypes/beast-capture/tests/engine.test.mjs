@@ -1293,3 +1293,19 @@ test('forfeited captures do not update the bestiary', () => {
   assert.equal(s.result.rank, 'expedition-failure');
   assert.equal(s.bestiary['chain-maw'], undefined, 'forfeited capture left no bestiary entry');
 });
+
+test('a completed species gets +1 effective bond for its passive', () => {
+  const all = { bronze: true, silver: true, gold: true };
+  const reliefAtDepth5 = (bestiary) => {
+    let s = createInitialState({
+      roster: ['storm-antler'], fielded: ['storm-antler'], bonds: { 'storm-antler': 1 },
+      encounterIds: ['chain-maw'], bestiary,
+    });
+    s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 5 } };
+    return applyStrikeAction(s).currentEncounter.pressure; // pressurePerTurn(5) = 3
+  };
+  // incomplete: grounding bond 1 -> relief 1 -> pressure 3 - 1 = 2
+  assert.equal(reliefAtDepth5({}), 2);
+  // complete: effective bond 2 -> relief 2 -> pressure 3 - 2 = 1
+  assert.equal(reliefAtDepth5({ 'storm-antler': all }), 1);
+});

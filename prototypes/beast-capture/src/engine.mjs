@@ -1,4 +1,4 @@
-import { createTargetState, seedEncounterKnowledge } from './state.mjs';
+import { createTargetState, seedEncounterKnowledge, speciesComplete } from './state.mjs';
 import { TARGET_BEASTS, COMPANION_ACTION_KIND, TOOL_ACTION_KIND, CAPTURED_ALLY } from './content.mjs';
 
 // Consequence tuning (F4/F7/F11). Kept as named constants for easy balancing.
@@ -184,7 +184,9 @@ function activePassives(state) {
   for (const id of Object.keys(state.party.beasts)) {
     const passive = CAPTURED_ALLY[id]?.passive;
     if (passive) {
-      map[passive] = state.bonds?.[id] ?? 0;
+      // A bestiary-complete species counts as +1 effective bond (collection-goal perk).
+      const perk = speciesComplete(state.bestiary, id) ? 1 : 0;
+      map[passive] = (state.bonds?.[id] ?? 0) + perk;
     }
   }
   return map;
