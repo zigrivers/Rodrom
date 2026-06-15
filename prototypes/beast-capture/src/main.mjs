@@ -7,6 +7,7 @@ import {
   applyToolAction,
   applyCompanionAction,
   attemptCapture,
+  pressCapture,
   withdrawEncounter,
   recoverAtLayer,
   secureHaul,
@@ -126,6 +127,9 @@ document.addEventListener('click', (event) => {
       break;
     case 'capture':
       state = attemptCapture(state);
+      break;
+    case 'press':
+      state = pressCapture(state);
       break;
     case 'withdraw':
       state = withdrawEncounter(state);

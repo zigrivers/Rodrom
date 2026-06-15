@@ -60,6 +60,7 @@ export function renderApp(state) {
   const encounterResolved = canAdvanceEncounter(state);
   const captureDisabled = target.captureState !== 'bindable';
   const advanceAllowed = encounterResolved;
+  const pressLevel = state.currentEncounter.pressLevel ?? 0;
 
   return `
     <div class="layout">
@@ -135,7 +136,8 @@ export function renderApp(state) {
           </div>
           <div class="action-group">
             <h4>Resolve</h4>
-            <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
+            <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Bind now${pressLevel > 0 ? ` (pressed ×${pressLevel})` : ''}</button>
+            <button data-action="press" ${renderDisabled(encounterResolved || captureDisabled)}>Press (risk for more)</button>
             <button data-action="withdraw" ${renderDisabled(encounterResolved)}>Withdraw</button>
           </div>
           <div class="action-group">

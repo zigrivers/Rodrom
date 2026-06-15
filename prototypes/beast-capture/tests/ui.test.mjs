@@ -9,6 +9,7 @@ import {
   applyToolAction,
   attemptCapture,
   extractExpedition,
+  pressCapture,
   secureHaul,
 } from '../src/engine.mjs';
 import { renderApp } from '../src/ui.mjs';
@@ -386,4 +387,21 @@ test('the result screen reports duplicate captures fused into bonds (cme.7)', ()
   s = extractExpedition(s);
 
   assert.match(renderApp(s), /fused|duplicate/i);
+});
+
+test('a bindable target offers Bind now and Press, with a pressed readout', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable
+  s = pressCapture(s); // pressLevel 1
+
+  const html = renderApp(s);
+  assert.match(html, /data-action="press"(?![^>]*disabled)/);
+  assert.match(html, /Bind now/);
+  assert.match(html, /pressed ×1/);
+});
+
+test('Press is disabled when the target is not bindable', () => {
+  const s = createInitialState({ encounterIds: ['chain-maw'] }); // unreadable, not bindable
+  assert.match(renderApp(s), /data-action="press"[^>]*disabled/);
 });
