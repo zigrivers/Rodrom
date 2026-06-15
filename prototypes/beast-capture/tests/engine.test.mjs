@@ -1058,3 +1058,24 @@ test('a deeply pressed catch (level >= 2) arrives with an extra bond', () => {
   // plus fielded-ally bond (+1). bonds: 0 +1(fielded) +1(fuse) +1(press) = 3
   assert.equal(s.bonds['chain-maw'], 3);
 });
+
+test('pressing until the window closes slips the beast and resets press level', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable, windowDecay 1
+  s = pressCapture(s); // windowDecay 2 (warning)
+  s = pressCapture(s); // windowDecay 3 -> slip
+  assert.notEqual(s.currentEncounter.target.captureState, 'bindable', 'beast slipped');
+  assert.equal(s.currentEncounter.pressLevel, 0, 'press level reset on slip');
+});
+
+test('Iron Hold lets you press without the window slipping', () => {
+  let s = createInitialState({ roster: ['chain-maw'], fielded: ['mireback-tortoise', 'chain-maw'], encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = pressCapture(s);
+  s = pressCapture(s);
+  s = pressCapture(s);
+  assert.equal(s.currentEncounter.target.captureState, 'bindable', 'still bindable');
+  assert.equal(s.currentEncounter.pressLevel, 3, 'pressed three times safely');
+});

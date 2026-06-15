@@ -304,7 +304,7 @@ function decayCaptureWindow(state) {
     const relaxed = { ...target, posture: def.initialPosture };
     relaxed.captureState = deriveCaptureState(relaxed, enc.flags);
     return appendLog(
-      { ...state, currentEncounter: { ...enc, target: relaxed, windowDecay: 0 } },
+      { ...state, currentEncounter: { ...enc, target: relaxed, windowDecay: 0, pressLevel: 0 } },
       `${target.name} slips loose — the capture window closes.`
     );
   }
