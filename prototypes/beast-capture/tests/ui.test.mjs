@@ -9,6 +9,8 @@ import {
   applyToolAction,
   attemptCapture,
   extractExpedition,
+  pressCapture,
+  secureHaul,
 } from '../src/engine.mjs';
 import { renderApp } from '../src/ui.mjs';
 
@@ -136,7 +138,7 @@ test('the encounter view coaches the player toward the capture path', () => {
   assert.match(renderApp(s), /make it cornered/i);
 
   s = applyCompanionAction(s, 'grave-hound', 'harry');
-  assert.match(renderApp(s), /Capture now before it closes/i);
+  assert.match(renderApp(s), /Bind now before it closes/i);
 });
 
 test('after scent-read reveals the attunement, the coach says to probe it', () => {
@@ -234,15 +236,28 @@ test('the expedition view shows how much of the haul is still at risk (G1)', () 
   assert.match(renderApp(s), /at risk/i);
 });
 
-test('an Anchor option appears once a layer is resolved', () => {
+test('Recover and Secure anchor options appear once a layer is resolved', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
-  assert.doesNotMatch(renderApp(s), /data-action="anchor"(?![^>]*disabled)/);
+  assert.doesNotMatch(renderApp(s), /data-action="anchor-recover"(?![^>]*disabled)/);
 
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
 
-  assert.match(renderApp(s), /data-action="anchor"(?![^>]*disabled)/);
+  const html = renderApp(s);
+  assert.match(html, /data-action="anchor-recover"(?![^>]*disabled)/);
+  assert.match(html, /data-action="anchor-secure"(?![^>]*disabled)/);
+});
+
+test('Secure is disabled when there is nothing new to secure', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = secureHaul(s); // securedCount == captures, anchored == true
+  s = { ...s, currentEncounter: { ...s.currentEncounter, anchored: false } }; // re-open the gate for the test
+
+  assert.match(renderApp(s), /data-action="anchor-secure"[^>]*disabled/);
 });
 
 test('an Extract option appears once a layer is resolved', () => {
@@ -372,4 +387,21 @@ test('the result screen reports duplicate captures fused into bonds (cme.7)', ()
   s = extractExpedition(s);
 
   assert.match(renderApp(s), /fused|duplicate/i);
+});
+
+test('a bindable target offers Bind now and Press, with a pressed readout', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable
+  s = pressCapture(s); // pressLevel 1
+
+  const html = renderApp(s);
+  assert.match(html, /data-action="press"(?![^>]*disabled)/);
+  assert.match(html, /Bind now/);
+  assert.match(html, /pressed ×1/);
+});
+
+test('Press is disabled when the target is not bindable', () => {
+  const s = createInitialState({ encounterIds: ['chain-maw'] }); // unreadable, not bindable
+  assert.match(renderApp(s), /data-action="press"[^>]*disabled/);
 });

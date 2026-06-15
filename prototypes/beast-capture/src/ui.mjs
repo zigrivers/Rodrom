@@ -60,6 +60,7 @@ export function renderApp(state) {
   const encounterResolved = canAdvanceEncounter(state);
   const captureDisabled = target.captureState !== 'bindable';
   const advanceAllowed = encounterResolved;
+  const pressLevel = state.currentEncounter.pressLevel ?? 0;
 
   return `
     <div class="layout">
@@ -135,12 +136,14 @@ export function renderApp(state) {
           </div>
           <div class="action-group">
             <h4>Resolve</h4>
-            <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
+            <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Bind now${pressLevel > 0 ? ` (pressed ×${pressLevel})` : ''}</button>
+            <button data-action="press" ${renderDisabled(encounterResolved || captureDisabled)}>Press (risk for more)</button>
             <button data-action="withdraw" ${renderDisabled(encounterResolved)}>Withdraw</button>
           </div>
           <div class="action-group">
             <h4>Between layers</h4>
-            <button data-action="anchor" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored)}>Anchor (recover)</button>
+            <button data-action="anchor-recover" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored)}>Anchor: Recover (heal)</button>
+            <button data-action="anchor-secure" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored || (state.securedCount ?? 0) >= state.party.captures.length)}>Anchor: Secure (bank haul)</button>
             <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Descend deeper</button>
             <button data-action="extract" ${renderDisabled(!advanceAllowed)}>Extract (keep haul)</button>
           </div>
@@ -180,7 +183,7 @@ function renderHaulRisk(state) {
   if (atRisk <= 0) {
     return state.party.captures.length > 0 ? '<p>Haul: all secured.</p>' : '';
   }
-  return `<p class="at-risk">Haul at risk: ${atRisk} unsecured capture${atRisk === 1 ? '' : 's'} — Anchor or Extract to keep ${atRisk === 1 ? 'it' : 'them'}.</p>`;
+  return `<p class="at-risk">Haul at risk: ${atRisk} unsecured capture${atRisk === 1 ? '' : 's'} — Secure or Extract to keep ${atRisk === 1 ? 'it' : 'them'}.</p>`;
 }
 
 // Coach toggle (cme.3): on = step-by-step guidance (teaches); off = oblique
@@ -325,7 +328,7 @@ function captureGuidance(state) {
   }
 
   if (target.captureState === 'bindable') {
-    return 'Window open — Capture now before it closes.';
+    return 'Window open — Bind now before it closes.';
   }
   if (def.concealed && target.posture !== def.bindPosture) {
     return `${target.name} masks its true nature. Use Grave Hound: Scent Read to reveal it.`;

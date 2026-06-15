@@ -18,6 +18,9 @@ const FAST_CAPTURE_TURNS = 4;
 const DUPE_CONVERT_LORE = 2;
 // Elite "Dire" quarries (G3c) are worth this much bonus Lore on capture.
 const ELITE_LORE = 4;
+// Press-your-luck (greed): each press level banked on a capture is worth this
+// much bonus Lore; a catch pressed to level 2+ also deepens that species' bond.
+const PRESS_LORE = 2;
 
 // Deeper layers press harder: per-turn pressure rises with descent depth, so
 // frenzy and failure scale with depth (run structure, t9i.3).
@@ -91,17 +94,28 @@ function completeExpedition(state, rank) {
     if (grade.clean) bonusLore += CLEAN_CAPTURE_LORE;
     if (grade.fast) bonusLore += FAST_CAPTURE_LORE;
   }
+  // Press-your-luck payoff (greed): bonus Lore per press level, and a perfect
+  // catch (press level >= 2) deepens that species' bond.
+  let pressLore = 0;
+  for (let i = 0; i < bankedGrades.length; i += 1) {
+    const level = bankedGrades[i].pressLevel ?? 0;
+    pressLore += level * PRESS_LORE;
+    if (level >= 2) {
+      const id = bankedCaptures[i];
+      bonds[id] = (bonds[id] ?? 0) + 1;
+    }
+  }
   const captures = bankedCaptures.length;
   const cleanCaptures = bankedGrades.filter((grade) => grade.clean).length;
   const eliteCaptures = bankedGrades.filter((grade) => grade.elite).length;
   const omenLore = (state.omen?.lorePerCapture ?? 0) * captures;
   const dupeLore = dupesFused * DUPE_CONVERT_LORE;
   const eliteLore = eliteCaptures * ELITE_LORE;
-  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore;
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore;
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, forfeited },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, forfeited },
     roster,
     bonds,
     lore: (state.lore ?? 0) + loreEarned,
@@ -290,7 +304,7 @@ function decayCaptureWindow(state) {
     const relaxed = { ...target, posture: def.initialPosture };
     relaxed.captureState = deriveCaptureState(relaxed, enc.flags);
     return appendLog(
-      { ...state, currentEncounter: { ...enc, target: relaxed, windowDecay: 0 } },
+      { ...state, currentEncounter: { ...enc, target: relaxed, windowDecay: 0, pressLevel: 0 } },
       `${target.name} slips loose — the capture window closes.`
     );
   }
@@ -517,6 +531,24 @@ export function applyGuardAction(state) {
   );
 }
 
+// Press-your-luck (greed): hold the open window one more turn for a richer
+// catch. The turn resolves normally, so window-decay (may slip) and pressure
+// (may frenzy) both apply. The reward is banked when you finally bind.
+export function pressCapture(state) {
+  if (isResolvedEncounter(state)) {
+    return state;
+  }
+  const enc = state.currentEncounter;
+  if (enc.target.captureState !== 'bindable') {
+    return finalizeEncounterAction(state, `${enc.target.name} is not ready to bind.`);
+  }
+  const pressed = {
+    ...state,
+    currentEncounter: { ...enc, pressLevel: (enc.pressLevel ?? 0) + 1 },
+  };
+  return finalizeEncounterAction(pressed, `You press the hold on ${enc.target.name}, risking more for a richer catch.`);
+}
+
 export function attemptCapture(state) {
   if (isResolvedEncounter(state)) {
     return state;
@@ -536,7 +568,7 @@ export function attemptCapture(state) {
   return finalizeEncounterAction(
     {
       ...state,
-      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast, elite: target.elite === true }],
+      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast, elite: target.elite === true, pressLevel: enc.pressLevel ?? 0 }],
       party: {
         ...state.party,
         captures: [...state.party.captures, target.id],
@@ -580,14 +612,32 @@ export function anchorHeal(depth) {
   return Math.max(1, 4 - (depth ?? 1));
 }
 
-// Anchors (E3): a recovery checkpoint between layers. Once a layer is resolved,
-// the expedition can anchor to heal the leader and shed beast fatigue before
-// deciding to descend or extract. Available once per layer.
-export function anchorExpedition(state) {
+// Anchor — Secure (greed): lock in the haul without healing. Consumes the
+// layer's single anchor. Dying still forfeits captures made after this.
+export function secureHaul(state) {
   if (state.expeditionComplete || !canAdvanceEncounter(state) || state.currentEncounter.anchored) {
     return state;
   }
+  const secured = state.party.captures.length;
+  const newlySecured = secured - (state.securedCount ?? 0);
+  return appendLog(
+    {
+      ...state,
+      securedCount: secured,
+      currentEncounter: { ...state.currentEncounter, anchored: true },
+    },
+    `The expedition secures its haul at layer ${state.currentEncounter.depth}${
+      newlySecured > 0 ? ` (${newlySecured} capture${newlySecured === 1 ? '' : 's'} locked in)` : ''
+    }.`
+  );
+}
 
+// Anchor — Recover (greed): heal the leader and shed beast fatigue WITHOUT
+// securing the haul. Consumes the layer's single anchor; recovery thins with depth.
+export function recoverAtLayer(state) {
+  if (state.expeditionComplete || !canAdvanceEncounter(state) || state.currentEncounter.anchored) {
+    return state;
+  }
   const heal = anchorHeal(state.currentEncounter.depth);
   const leader = {
     ...state.party.leader,
@@ -599,19 +649,13 @@ export function anchorExpedition(state) {
       { ...beast, fatigue: Math.max(0, beast.fatigue - 2) },
     ])
   );
-
-  const secured = state.party.captures.length; // G1: anchoring banks the haul so far
-  const newlySecured = secured - (state.securedCount ?? 0);
   return appendLog(
     {
       ...state,
-      securedCount: secured,
       party: { ...state.party, leader, beasts },
       currentEncounter: { ...state.currentEncounter, anchored: true },
     },
-    `The expedition anchors at layer ${state.currentEncounter.depth}: it heals, steadies, and secures its haul${
-      newlySecured > 0 ? ` (${newlySecured} capture${newlySecured === 1 ? '' : 's'} locked in)` : ''
-    } (recovery thins deeper down).`
+    `The expedition makes camp at layer ${state.currentEncounter.depth}: it heals and steadies (recovery thins deeper down).`
   );
 }
 
@@ -670,6 +714,7 @@ export function advanceEncounter(state) {
       riskLevel: carryoverPressure,
       escapeProgress: 0,
       windowDecay: 0,
+      pressLevel: 0,
       structures: [],
       flags: {
         attunementMatch: false,

@@ -7,8 +7,10 @@ import {
   applyToolAction,
   applyCompanionAction,
   attemptCapture,
+  pressCapture,
   withdrawEncounter,
-  anchorExpedition,
+  recoverAtLayer,
+  secureHaul,
   advanceEncounter,
   extractExpedition,
 } from './engine.mjs';
@@ -126,11 +128,17 @@ document.addEventListener('click', (event) => {
     case 'capture':
       state = attemptCapture(state);
       break;
+    case 'press':
+      state = pressCapture(state);
+      break;
     case 'withdraw':
       state = withdrawEncounter(state);
       break;
-    case 'anchor':
-      state = anchorExpedition(state);
+    case 'anchor-recover':
+      state = recoverAtLayer(state);
+      break;
+    case 'anchor-secure':
+      state = secureHaul(state);
       break;
     case 'advance':
       state = advanceEncounter(state);

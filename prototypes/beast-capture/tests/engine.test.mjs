@@ -12,7 +12,6 @@ import {
 } from '../src/state.mjs';
 import {
   advanceEncounter,
-  anchorExpedition,
   anchorHeal,
   applyCompanionAction,
   applyGuardAction,
@@ -22,7 +21,10 @@ import {
   attemptCapture,
   canAdvanceEncounter,
   extractExpedition,
+  pressCapture,
   pressurePerTurn,
+  recoverAtLayer,
+  secureHaul,
   startingPressure,
   withdrawEncounter,
 } from '../src/engine.mjs';
@@ -556,15 +558,15 @@ test('relentless reckless pressure can lose the leader and fail the expedition',
 
 // G1 (checkpoint stakes) — Anchors secure the haul; dying forfeits the
 // captures made since the last Anchor, while extracting secures everything.
-test('anchoring secures the captures made so far', () => {
+test('securing locks in the captures made so far', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
   assert.equal(s.securedCount, 0, 'captures start unsecured');
 
-  s = anchorExpedition(s);
-  assert.equal(s.securedCount, 1, 'anchoring secures the haul so far');
+  s = secureHaul(s);
+  assert.equal(s.securedCount, 1, 'securing banks the haul so far');
 });
 
 test('dying forfeits unsecured captures but keeps anchored (secured) ones', () => {
@@ -573,7 +575,7 @@ test('dying forfeits unsecured captures but keeps anchored (secured) ones', () =
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = anchorExpedition(s);
+  s = secureHaul(s);
   s = advanceEncounter(s); // depth 2: Chain Maw
 
   // Layer 2: capture Chain Maw — unsecured (no Anchor after it).
@@ -590,6 +592,29 @@ test('dying forfeits unsecured captures but keeps anchored (secured) ones', () =
   assert.ok(s.roster.includes('ashwing-moth'), 'secured capture is kept');
   assert.ok(!s.roster.includes('chain-maw'), 'unsecured capture is forfeited');
   assert.equal(s.result.forfeited, 1);
+});
+
+test('dying after choosing Recover (not Secure) forfeits the unsecured haul', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'storm-antler'] });
+  // Layer 1: capture Ashwing, then RECOVER (heals, does NOT secure)
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = recoverAtLayer(s);
+  assert.equal(s.securedCount, 0, 'recover heals but does not secure');
+  s = advanceEncounter(s); // depth 2: Chain Maw
+
+  // Layer 2: capture Chain Maw (also unsecured), building carryover for a fatal descent
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+
+  s = { ...s, party: { ...s.party, leader: { ...s.party.leader, health: 1 } } };
+  s = advanceEncounter(s); // fatal descent
+
+  assert.equal(s.result.rank, 'expedition-failure');
+  assert.ok(!s.roster.includes('ashwing-moth'), 'recovered-but-unsecured capture is forfeited');
+  assert.equal(s.result.forfeited, 2);
 });
 
 test('extracting secures the whole haul, even captures made after the last anchor', () => {
@@ -634,19 +659,19 @@ test('anchor recovery thins with depth', () => {
   assert.equal(anchorHeal(5), 1);
 });
 
-test('anchoring sheds beast fatigue and marks the layer anchored', () => {
+test('recovering sheds beast fatigue and marks the layer anchored', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
   assert.equal(s.party.beasts['grave-hound'].fatigue, 1);
 
-  s = anchorExpedition(s);
+  s = recoverAtLayer(s);
   assert.equal(s.party.beasts['grave-hound'].fatigue, 0);
   assert.equal(s.currentEncounter.anchored, true);
 });
 
-test('anchoring heals a wounded leader, capped at max', () => {
+test('recovering heals a wounded leader, capped at max', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'storm-antler'] });
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
@@ -657,21 +682,24 @@ test('anchoring heals a wounded leader, capped at max', () => {
   s = attemptCapture(s);
 
   const before = s.party.leader.health;
-  s = anchorExpedition(s);
+  s = recoverAtLayer(s);
   assert.ok(s.party.leader.health > before);
   assert.ok(s.party.leader.health <= s.party.leader.maxHealth);
 });
 
-test('anchoring is unavailable until the layer is resolved and only once per layer', () => {
-  let s = createInitialState({ encounterIds: ['chain-maw'] });
-  assert.equal(anchorExpedition(s), s); // unresolved
+test('an anchor is gated until the layer is resolved and is once per layer', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  assert.equal(recoverAtLayer(s), s, 'unresolved -> no-op');
+  assert.equal(secureHaul(s), s, 'unresolved -> no-op');
 
-  s = applyHeroProbe(s, 'iron');
-  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = anchorExpedition(s);
+
+  s = recoverAtLayer(s); // spends the layer's single anchor
   const anchored = s;
-  assert.equal(anchorExpedition(s), anchored); // already anchored -> no-op
+  assert.equal(secureHaul(s), anchored, 'cannot also secure after recovering');
+  assert.equal(recoverAtLayer(s), anchored, 'cannot recover twice');
 });
 
 test('the descent is endless: descending past the planned layers never auto-completes', () => {
@@ -969,4 +997,121 @@ test('descending into a deeper layer starts it already under pressure', () => {
   assert.equal(s.currentEncounter.depth, 3);
   assert.equal(s.currentEncounter.pressure, startingPressure(3));
   assert.ok(s.currentEncounter.pressure > 0);
+});
+
+test('every encounter starts at press level 0', () => {
+  const fresh = createInitialState({ encounterIds: ['chain-maw'] });
+  assert.equal(fresh.currentEncounter.pressLevel, 0);
+});
+
+test('secureHaul locks in the haul without healing', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = { ...s, party: { ...s.party, leader: { ...s.party.leader, health: 3 } } };
+
+  const before = s.party.leader.health;
+  s = secureHaul(s);
+
+  assert.equal(s.securedCount, 1, 'haul secured');
+  assert.equal(s.party.leader.health, before, 'no healing');
+  assert.equal(s.currentEncounter.anchored, true, 'consumes the layer anchor');
+});
+
+test('recoverAtLayer heals and sheds fatigue without securing', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = { ...s, party: { ...s.party, leader: { ...s.party.leader, health: 2 } } };
+
+  s = recoverAtLayer(s);
+
+  assert.equal(s.party.leader.health, 2 + anchorHeal(1), 'leader healed');
+  assert.equal(s.party.beasts['grave-hound'].fatigue, 0, 'fatigue shed (was 1, -2 floored at 0)');
+  assert.equal(s.securedCount, 0, 'haul NOT secured');
+  assert.equal(s.currentEncounter.anchored, true, 'consumes the layer anchor');
+});
+
+test('pressing a bindable target raises press level and spends a turn', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // -> bindable
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+  const turnBefore = s.currentEncounter.turn;
+
+  s = pressCapture(s);
+
+  assert.equal(s.currentEncounter.pressLevel, 1, 'press level up');
+  assert.equal(s.currentEncounter.turn, turnBefore + 1, 'a turn was spent');
+});
+
+test('pressing a target that is not bindable does not raise press level', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron'); // probed but not yet bindable (no posture)
+  s = pressCapture(s);
+  assert.equal(s.currentEncounter.pressLevel, 0);
+});
+
+test('binding after pressing banks bonus Lore and a perfect-catch bond', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable, windowDecay now 1
+  s = pressCapture(s); // pressLevel 1, windowDecay 2 (still bindable)
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+  s = attemptCapture(s); // bind at pressLevel 1
+  s = extractExpedition(s);
+
+  // base 1*3 + depth 1 = 4; clean+fast bonus 3; press 1*2 = 2  => 9
+  assert.equal(s.result.loreEarned, 9);
+});
+
+test('a deeply pressed catch (level >= 2) arrives with an extra bond', () => {
+  let s = createInitialState({ roster: ['chain-maw'], fielded: ['mireback-tortoise', 'chain-maw'], encounterIds: ['chain-maw'], bonds: { 'chain-maw': 0 } });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable (Iron Hold from fielded chain-maw => no decay)
+  s = pressCapture(s); // 1
+  s = pressCapture(s); // 2 (no slip: Iron Hold)
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  // chain-maw is a dupe (already owned) so it fuses (+1); pressLevel>=2 adds a further +1;
+  // plus fielded-ally bond (+1). bonds: 0 +1(fielded) +1(fuse) +1(press) = 3
+  assert.equal(s.bonds['chain-maw'], 3);
+});
+
+test('pressing until the window closes slips the beast and resets press level', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable, windowDecay 1
+  s = pressCapture(s); // windowDecay 2 (warning)
+  s = pressCapture(s); // windowDecay 3 -> slip
+  assert.notEqual(s.currentEncounter.target.captureState, 'bindable', 'beast slipped');
+  assert.equal(s.currentEncounter.pressLevel, 0, 'press level reset on slip');
+});
+
+test('Iron Hold lets you press without the window slipping', () => {
+  let s = createInitialState({ roster: ['chain-maw'], fielded: ['mireback-tortoise', 'chain-maw'], encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = pressCapture(s);
+  s = pressCapture(s);
+  s = pressCapture(s);
+  assert.equal(s.currentEncounter.target.captureState, 'bindable', 'still bindable');
+  assert.equal(s.currentEncounter.pressLevel, 3, 'pressed three times safely');
+});
+
+test('pressing while pressure is high can frenzy and wound the leader', () => {
+  // staked snare keeps the window open so we can press into a frenzy without slipping
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyToolAction(s, 'snare-line'); // window will not decay
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable
+  const hp0 = s.party.leader.health;
+  for (let i = 0; i < 8 && s.party.leader.health === hp0; i += 1) {
+    s = pressCapture(s);
+  }
+  assert.ok(s.party.leader.health < hp0, 'a frenzy during a long press wounded the leader');
 });
