@@ -40,6 +40,16 @@ function completeExpedition(state, rank) {
   const originalBonds = state.bonds ?? {};
   const bonds = { ...originalBonds };
 
+  // Checkpoint stakes (G1): a successful extract secures the whole haul; dying
+  // (expedition-failure) only banks what was secured by the last Anchor — the
+  // rest of the run's captures (and their Lore) are forfeit.
+  const failed = rank === 'expedition-failure';
+  const totalCaptures = state.party.captures.length;
+  const bankedCount = failed ? Math.min(state.securedCount ?? 0, totalCaptures) : totalCaptures;
+  const bankedCaptures = state.party.captures.slice(0, bankedCount);
+  const bankedGrades = (state.captureLog ?? []).slice(0, bankedCount);
+  const forfeited = totalCaptures - bankedCount;
+
   // 1. Fielded captured allies deepen their bond by surviving the run.
   for (const id of state.fielded) {
     if (CAPTURED_ALLY[id]) {
@@ -48,9 +58,8 @@ function completeExpedition(state, rank) {
   }
 
   // Which species were captured cleanly (for the cme.3 pre-bond on new species).
-  const captureLog = state.captureLog ?? [];
   const capturedClean = {};
-  for (const grade of captureLog) {
+  for (const grade of bankedGrades) {
     capturedClean[grade.id] = capturedClean[grade.id] || grade.clean;
   }
 
@@ -60,7 +69,7 @@ function completeExpedition(state, rank) {
   const roster = [...state.roster];
   const owned = new Set(state.roster);
   let dupesFused = 0;
-  for (const id of state.party.captures) {
+  for (const id of bankedCaptures) {
     if (owned.has(id)) {
       bonds[id] = (bonds[id] ?? 0) + 1; // fuse
       dupesFused += 1;
@@ -73,22 +82,22 @@ function completeExpedition(state, rank) {
     }
   }
 
-  // 3. Lore: base (captures + depth) + capture-quality bonus (cme.3) + omen
-  // (cme.6) + duplicate conversion (cme.7).
+  // 3. Lore: base (banked captures + depth) + capture-quality bonus (cme.3) +
+  // omen (cme.6) + duplicate conversion (cme.7). Forfeited captures earn nothing.
   let bonusLore = 0;
-  for (const grade of captureLog) {
+  for (const grade of bankedGrades) {
     if (grade.clean) bonusLore += CLEAN_CAPTURE_LORE;
     if (grade.fast) bonusLore += FAST_CAPTURE_LORE;
   }
-  const captures = state.party.captures.length;
-  const cleanCaptures = captureLog.filter((grade) => grade.clean).length;
+  const captures = bankedCaptures.length;
+  const cleanCaptures = bankedGrades.filter((grade) => grade.clean).length;
   const omenLore = (state.omen?.lorePerCapture ?? 0) * captures;
   const dupeLore = dupesFused * DUPE_CONVERT_LORE;
   const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore;
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, forfeited },
     roster,
     bonds,
     lore: (state.lore ?? 0) + loreEarned,
@@ -583,13 +592,18 @@ export function anchorExpedition(state) {
     ])
   );
 
+  const secured = state.party.captures.length; // G1: anchoring banks the haul so far
+  const newlySecured = secured - (state.securedCount ?? 0);
   return appendLog(
     {
       ...state,
+      securedCount: secured,
       party: { ...state.party, leader, beasts },
       currentEncounter: { ...state.currentEncounter, anchored: true },
     },
-    `The expedition anchors at layer ${state.currentEncounter.depth}: it heals and steadies (recovery thins deeper down).`
+    `The expedition anchors at layer ${state.currentEncounter.depth}: it heals, steadies, and secures its haul${
+      newlySecured > 0 ? ` (${newlySecured} capture${newlySecured === 1 ? '' : 's'} locked in)` : ''
+    } (recovery thins deeper down).`
   );
 }
 

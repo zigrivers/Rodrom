@@ -150,6 +150,9 @@ export function createInitialState(options = {}) {
     coach: options.coach ?? true,
     // Per-run grades for each capture (clean/fast), scored into Lore + bond (cme.3).
     captureLog: [],
+    // How many of this run's captures are secured (banked-safe). Anchoring and
+    // extracting secure the haul; dying forfeits everything beyond this (G1).
+    securedCount: 0,
     // Campaign-level roster of captured beasts, carried across runs.
     roster: options.roster ?? [],
     // Bond level per captured beast (times fielded), carried across runs.
