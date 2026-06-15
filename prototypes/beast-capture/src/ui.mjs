@@ -328,7 +328,7 @@ function captureGuidance(state) {
   }
 
   if (target.captureState === 'bindable') {
-    return 'Window open — Capture now before it closes.';
+    return 'Window open — Bind now before it closes.';
   }
   if (def.concealed && target.posture !== def.bindPosture) {
     return `${target.name} masks its true nature. Use Grave Hound: Scent Read to reveal it.`;

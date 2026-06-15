@@ -138,7 +138,7 @@ test('the encounter view coaches the player toward the capture path', () => {
   assert.match(renderApp(s), /make it cornered/i);
 
   s = applyCompanionAction(s, 'grave-hound', 'harry');
-  assert.match(renderApp(s), /Capture now before it closes/i);
+  assert.match(renderApp(s), /Bind now before it closes/i);
 });
 
 test('after scent-read reveals the attunement, the coach says to probe it', () => {
