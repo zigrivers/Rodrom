@@ -242,6 +242,63 @@ test('fielding a subset of beasts omits the unfielded ones from the party', () =
   assert.deepEqual(s.fielded, ['mireback-tortoise']);
 });
 
+// G2 — bond-scaled passives: deepening a bond (via clean captures + dupe fusing)
+// makes the ally's passive measurably stronger, so the roster-build loop pays off.
+test('Grounding Aura scales its pressure relief with bond', () => {
+  const pressureAtDepth5 = (bond) => {
+    let s = createInitialState({
+      roster: ['storm-antler'],
+      fielded: ['storm-antler'],
+      bonds: { 'storm-antler': bond },
+      encounterIds: ['chain-maw'],
+    });
+    s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 5 } };
+    return applyStrikeAction(s).currentEncounter.pressure; // pressurePerTurn(5) = 3
+  };
+  assert.equal(pressureAtDepth5(0), 2, 'bond 0 relieves 1 (3 - 1)');
+  assert.equal(pressureAtDepth5(4), 0, 'bond 4 relieves 3 (3 - 3)');
+});
+
+test('Veilsight also reveals the next layer at a deep bond', () => {
+  const deep = createInitialState({
+    roster: ['veil-lynx'],
+    fielded: ['veil-lynx'],
+    bonds: { 'veil-lynx': 3 },
+    encounterIds: ['chain-maw', 'storm-antler'],
+  });
+  assert.ok(deep.codexHints['chain-maw']?.includes('iron'), 'current layer revealed');
+  assert.ok(deep.codexHints['storm-antler']?.includes('storm'), 'next layer revealed at deep bond');
+
+  const shallow = createInitialState({
+    roster: ['veil-lynx'],
+    fielded: ['veil-lynx'],
+    bonds: { 'veil-lynx': 1 },
+    encounterIds: ['chain-maw', 'storm-antler'],
+  });
+  assert.ok(shallow.codexHints['chain-maw']?.includes('iron'));
+  assert.ok(!(shallow.codexHints['storm-antler'] ?? []).includes('storm'), 'next layer hidden at shallow bond');
+});
+
+test('Iron Hold at a deep bond also holds the quarry from escaping', () => {
+  let deep = createInitialState({
+    roster: ['chain-maw'],
+    fielded: ['chain-maw'],
+    bonds: { 'chain-maw': 3 },
+    encounterIds: ['ashwing-moth'],
+  });
+  for (let i = 0; i < 5; i += 1) deep = applyHeroProbe(deep, 'storm'); // all wrong reads
+  assert.notEqual(deep.currentEncounter.target.captureState, 'escaped', 'deep Iron Hold prevents escape');
+
+  let shallow = createInitialState({
+    roster: ['chain-maw'],
+    fielded: ['chain-maw'],
+    bonds: { 'chain-maw': 1 },
+    encounterIds: ['ashwing-moth'],
+  });
+  for (let i = 0; i < 5; i += 1) shallow = applyHeroProbe(shallow, 'storm');
+  assert.equal(shallow.currentEncounter.target.captureState, 'escaped', 'shallow Iron Hold does not');
+});
+
 test('an unfielded beast action is a no-op', () => {
   const s = createInitialState({ fielded: ['mireback-tortoise'], encounterIds: ['chain-maw'] });
   assert.equal(applyCompanionAction(s, 'grave-hound', 'harry'), s);
