@@ -464,7 +464,6 @@ export function applyCompanionAction(state, beastId, actionId) {
 
   const enc = state.currentEncounter;
   const target = enc.target;
-  const def = beastDef(target);
 
   const kind = COMPANION_ACTION_KIND[actionId] ?? null;
   const drive = routeForKind(target, kind);
