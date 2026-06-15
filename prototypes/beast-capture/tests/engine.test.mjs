@@ -8,6 +8,8 @@ import {
   upgradeCost,
   toggleFielded,
   fieldCap,
+  speciesComplete,
+  bestiaryComplete,
   FIELD_CAP,
 } from '../src/state.mjs';
 import {
@@ -173,6 +175,31 @@ test('buying the Kennel spends lore and is a real town service', () => {
   const after = buyUpgrade(town, 'kennel');
   assert.equal(after.upgrades.kennel, 1);
   assert.equal(after.lore, 30 - upgradeCost('kennel', 0));
+});
+
+test('createInitialState carries a bestiary (default empty)', () => {
+  assert.deepEqual(createInitialState().bestiary, {});
+  const seeded = { 'chain-maw': { bronze: true, silver: false, gold: false } };
+  assert.deepEqual(createInitialState({ bestiary: seeded }).bestiary, seeded);
+});
+
+test('speciesComplete and bestiaryComplete report tier completion', () => {
+  const all = { bronze: true, silver: true, gold: true };
+  assert.equal(speciesComplete({ 'chain-maw': all }, 'chain-maw'), true);
+  assert.equal(speciesComplete({ 'chain-maw': { bronze: true, silver: true, gold: false } }, 'chain-maw'), false);
+  assert.equal(speciesComplete({}, 'chain-maw'), false);
+
+  const complete = { 'ashwing-moth': all, 'chain-maw': all, 'veil-lynx': all, 'storm-antler': all };
+  assert.equal(bestiaryComplete(complete), true);
+  assert.equal(bestiaryComplete({ 'ashwing-moth': all }), false);
+  assert.equal(bestiaryComplete(undefined), false);
+});
+
+test('buyUpgrade preserves the bestiary across a purchase', () => {
+  const bestiary = { 'chain-maw': { bronze: true, silver: true, gold: false } };
+  const state = createInitialState({ started: false, lore: 100, bestiary });
+  const after = buyUpgrade(state, 'kennel');
+  assert.deepEqual(after.bestiary, bestiary);
 });
 
 test('completing an expedition banks its captures into the roster', () => {
