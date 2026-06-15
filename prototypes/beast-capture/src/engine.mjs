@@ -16,6 +16,8 @@ const FAST_CAPTURE_TURNS = 4;
 // Duplicate-capture payoff (cme.7): re-capturing an owned species fuses into a
 // deeper bond and converts the surplus to this much Lore instead of a dead dupe.
 const DUPE_CONVERT_LORE = 2;
+// Elite "Dire" quarries (G3c) are worth this much bonus Lore on capture.
+const ELITE_LORE = 4;
 
 // Deeper layers press harder: per-turn pressure rises with descent depth, so
 // frenzy and failure scale with depth (run structure, t9i.3).
@@ -91,13 +93,15 @@ function completeExpedition(state, rank) {
   }
   const captures = bankedCaptures.length;
   const cleanCaptures = bankedGrades.filter((grade) => grade.clean).length;
+  const eliteCaptures = bankedGrades.filter((grade) => grade.elite).length;
   const omenLore = (state.omen?.lorePerCapture ?? 0) * captures;
   const dupeLore = dupesFused * DUPE_CONVERT_LORE;
-  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore;
+  const eliteLore = eliteCaptures * ELITE_LORE;
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore;
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, forfeited },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, forfeited },
     roster,
     bonds,
     lore: (state.lore ?? 0) + loreEarned,
@@ -532,7 +536,7 @@ export function attemptCapture(state) {
   return finalizeEncounterAction(
     {
       ...state,
-      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast }],
+      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast, elite: target.elite === true }],
       party: {
         ...state.party,
         captures: [...state.party.captures, target.id],

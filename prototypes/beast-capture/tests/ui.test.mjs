@@ -52,6 +52,11 @@ test('the town offers multiple distinct services to spend Lore on (cme.4)', () =
   assert.match(html, /data-action="buy-scouts-lantern"/);
 });
 
+test('the town offers the Kennel field-slot service (G3b)', () => {
+  const html = renderApp(createInitialState({ started: false, lore: 50 }));
+  assert.match(html, /data-action="buy-kennel"/);
+});
+
 test('the result screen reports lore earned', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth'] });
   s = applyHeroProbe(s, 'ash');

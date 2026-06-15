@@ -7,6 +7,7 @@ import {
   buyUpgrade,
   upgradeCost,
   toggleFielded,
+  fieldCap,
   FIELD_CAP,
 } from '../src/state.mjs';
 import {
@@ -25,7 +26,7 @@ import {
   startingPressure,
   withdrawEncounter,
 } from '../src/engine.mjs';
-import { createTargetState } from '../src/state.mjs';
+import { createTargetState, isEliteDepth } from '../src/state.mjs';
 
 test('the default expedition captures all three encounters via their distinct conditions', () => {
   let state = createInitialState();
@@ -149,6 +150,29 @@ test('an unaffordable upgrade is a no-op', () => {
   assert.equal(buyUpgrade(broke, 'infirmary'), broke);
 });
 
+// G3b — keep Lore meaningful: a steeper cost curve plus a run-changing sink
+// (the Kennel raises the field cap, so Lore buys more passives in play).
+test('the Lore cost curve is steeper so Lore keeps its weight', () => {
+  assert.equal(upgradeCost('infirmary', 0), 5);
+  assert.equal(upgradeCost('infirmary', 1), 20);
+  assert.equal(upgradeCost('infirmary', 2), 45);
+});
+
+test('the Kennel raises the field cap so Lore buys more passives in play', () => {
+  assert.equal(fieldCap({}), FIELD_CAP);
+  assert.equal(fieldCap({ kennel: 2 }), FIELD_CAP + 2);
+
+  const base = ['grave-hound', 'mireback-tortoise', 'chain-maw', 'veil-lynx']; // base cap
+  assert.equal(toggleFielded(base, 'storm-antler', fieldCap({ kennel: 1 })).length, 5);
+});
+
+test('buying the Kennel spends lore and is a real town service', () => {
+  const town = createInitialState({ started: false, lore: 30, upgrades: {} });
+  const after = buyUpgrade(town, 'kennel');
+  assert.equal(after.upgrades.kennel, 1);
+  assert.equal(after.lore, 30 - upgradeCost('kennel', 0));
+});
+
 test('completing an expedition banks its captures into the roster', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth'] });
   s = applyHeroProbe(s, 'ash');
@@ -241,6 +265,37 @@ test('Skittish Kin: a fielded Ashwing ally raises the escape tolerance', () => {
   withKin = applyHeroProbe(withKin, 'stone');
   withKin = applyHeroProbe(withKin, 'stone');
   assert.notEqual(withKin.currentEncounter.target.captureState, 'escaped');
+});
+
+// G3c — elite "Dire" quarries appear at deep layers: tougher, tagged, and worth
+// bonus Lore, so descending introduces interest instead of recycling the same beasts.
+test('elite layers appear at depth and tag a tougher, richer quarry', () => {
+  assert.equal(isEliteDepth(1), false);
+  assert.equal(isEliteDepth(3), false);
+  assert.equal(isEliteDepth(4), true);
+  assert.equal(isEliteDepth(8), true);
+
+  const elite = createTargetState('chain-maw', 4);
+  assert.equal(elite.elite, true);
+  assert.match(elite.name, /Dire/);
+  assert.ok(elite.maxHealth > createTargetState('chain-maw', 4 - 0).maxHealth - 2); // boosted vs base+depth
+
+  const normal = createTargetState('chain-maw', 1);
+  assert.ok(!normal.elite);
+});
+
+test('capturing an elite quarry earns bonus Lore', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  // simulate an elite layer (depth 4)
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s); // clean + fast
+  s = extractExpedition(s);
+
+  assert.equal(s.result.eliteCaptures, 1);
+  // base 1*3 + depth 4 + clean/fast 3 + elite 4 = 14
+  assert.equal(s.result.loreEarned, 14);
 });
 
 // G3a — a field cap makes composition a real trade-off: with a full roster you
