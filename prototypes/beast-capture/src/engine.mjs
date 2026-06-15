@@ -718,9 +718,11 @@ export function advanceEncounter(state) {
       structures: [],
       flags: {
         attunementMatch: false,
+        altAttunementMatch: false,
         guardRaised: false,
         braceRaised: false,
         alerted: carryoverPressure > 0,
+        agitated: false,
       },
     },
     party: {

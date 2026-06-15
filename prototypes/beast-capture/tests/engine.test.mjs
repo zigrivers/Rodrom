@@ -1115,3 +1115,14 @@ test('pressing while pressure is high can frenzy and wound the leader', () => {
   }
   assert.ok(s.party.leader.health < hp0, 'a frenzy during a long press wounded the leader');
 });
+
+test('dual-path altBind activates only for non-concealed elites', () => {
+  const normal = createTargetState('chain-maw', 1);
+  assert.equal(normal.altBind, null, 'normal beast is single-path');
+
+  const elite = createTargetState('chain-maw', 4); // isEliteDepth(4) === true
+  assert.deepEqual(elite.altBind, { attunement: 'storm', bindKind: 'ground', bindPosture: 'grounded' });
+
+  const direVeil = createTargetState('veil-lynx', 4); // concealed -> excluded
+  assert.equal(direVeil.altBind, null, 'concealed elite stays single-path');
+});
