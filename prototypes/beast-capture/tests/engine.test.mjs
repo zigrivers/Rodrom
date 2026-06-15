@@ -23,6 +23,7 @@ import {
   canAdvanceEncounter,
   extractExpedition,
   pressurePerTurn,
+  secureHaul,
   startingPressure,
   withdrawEncounter,
 } from '../src/engine.mjs';
@@ -969,4 +970,19 @@ test('descending into a deeper layer starts it already under pressure', () => {
   assert.equal(s.currentEncounter.depth, 3);
   assert.equal(s.currentEncounter.pressure, startingPressure(3));
   assert.ok(s.currentEncounter.pressure > 0);
+});
+
+test('secureHaul locks in the haul without healing', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = { ...s, party: { ...s.party, leader: { ...s.party.leader, health: 3 } } };
+
+  const before = s.party.leader.health;
+  s = secureHaul(s);
+
+  assert.equal(s.securedCount, 1, 'haul secured');
+  assert.equal(s.party.leader.health, before, 'no healing');
+  assert.equal(s.currentEncounter.anchored, true, 'consumes the layer anchor');
 });

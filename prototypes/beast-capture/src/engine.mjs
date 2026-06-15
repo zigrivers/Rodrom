@@ -580,6 +580,26 @@ export function anchorHeal(depth) {
   return Math.max(1, 4 - (depth ?? 1));
 }
 
+// Anchor — Secure (greed): lock in the haul without healing. Consumes the
+// layer's single anchor. Dying still forfeits captures made after this.
+export function secureHaul(state) {
+  if (state.expeditionComplete || !canAdvanceEncounter(state) || state.currentEncounter.anchored) {
+    return state;
+  }
+  const secured = state.party.captures.length;
+  const newlySecured = secured - (state.securedCount ?? 0);
+  return appendLog(
+    {
+      ...state,
+      securedCount: secured,
+      currentEncounter: { ...state.currentEncounter, anchored: true },
+    },
+    `The expedition secures its haul at layer ${state.currentEncounter.depth}${
+      newlySecured > 0 ? ` (${newlySecured} capture${newlySecured === 1 ? '' : 's'} locked in)` : ''
+    }.`
+  );
+}
+
 // Anchors (E3): a recovery checkpoint between layers. Once a layer is resolved,
 // the expedition can anchor to heal the leader and shed beast fatigue before
 // deciding to descend or extract. Available once per layer.
