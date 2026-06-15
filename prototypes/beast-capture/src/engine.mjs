@@ -210,6 +210,23 @@ function evaluateProbe(target, attunement) {
   return { matched, altMatched, reacts: matched || altMatched };
 }
 
+// Which bind route an action of `kind` serves on this target, honoring the
+// active alt route on dual-path elites (adaptive-read). Returns the posture to
+// drive and whether it's the 'bold' (primary) or 'patient' (alt) route, or null.
+function routeForKind(target, kind) {
+  if (kind == null) {
+    return null;
+  }
+  const def = beastDef(target);
+  if (kind === def.bindKind) {
+    return { posture: def.bindPosture, route: 'bold' };
+  }
+  if (target.altBind && kind === target.altBind.bindKind) {
+    return { posture: target.altBind.bindPosture, route: 'patient' };
+  }
+  return null;
+}
+
 // Capture state is derived from the two requirements, never set imperatively
 // (except terminal states), so a reached window can't be silently downgraded.
 function deriveCaptureState(target, flags) {
@@ -217,11 +234,16 @@ function deriveCaptureState(target, flags) {
     return target.captureState;
   }
   const def = beastDef(target);
-  const postureReady = target.posture === def.bindPosture;
-  if (flags.attunementMatch && postureReady) {
+  const boldReady = flags.attunementMatch && target.posture === def.bindPosture;
+  const patientReady =
+    Boolean(target.altBind) && flags.altAttunementMatch && target.posture === target.altBind.bindPosture;
+  if (boldReady || patientReady) {
     return 'bindable';
   }
-  if (flags.attunementMatch || postureReady) {
+  const anyAttunement = flags.attunementMatch || flags.altAttunementMatch;
+  const anyPosture =
+    target.posture === def.bindPosture || (target.altBind && target.posture === target.altBind.bindPosture);
+  if (anyAttunement || anyPosture) {
     return 'probed';
   }
   return 'unreadable';
@@ -392,18 +414,22 @@ export function applyToolAction(state, toolId) {
   }
 
   const target = enc.target;
-  const def = beastDef(target);
-  const triggersPosture = TOOL_ACTION_KIND[toolId] != null && TOOL_ACTION_KIND[toolId] === def.bindKind;
+  const drive = routeForKind(target, TOOL_ACTION_KIND[toolId]);
+  const triggersPosture = drive != null;
 
-  const flags = toolId === 'snare-line' ? { ...enc.flags, snared: true } : enc.flags;
+  const flags = toolId === 'snare-line' ? { ...enc.flags, snared: true } : { ...enc.flags };
   const updatedTarget = { ...target };
   if (triggersPosture) {
-    updatedTarget.posture = def.bindPosture;
+    updatedTarget.posture = drive.posture;
+    if (drive.route === 'bold' && target.altBind) {
+      flags.agitated = true;
+    }
   }
   updatedTarget.captureState = deriveCaptureState(updatedTarget, flags);
 
+  const agitate = triggersPosture && drive.route === 'bold' && target.altBind ? ' Forcing it agitates the quarry.' : '';
   const line = triggersPosture
-    ? `Placed ${toolId}; ${target.name} is ${def.bindPosture}.`
+    ? `Placed ${toolId}; ${target.name} is ${drive.posture}.${agitate}`
     : toolId === 'snare-line'
       ? `Staked a snare-line; ${target.name} cannot flee while it holds.`
       : `Placed ${toolId}.`;
@@ -441,7 +467,8 @@ export function applyCompanionAction(state, beastId, actionId) {
   const def = beastDef(target);
 
   const kind = COMPANION_ACTION_KIND[actionId] ?? null;
-  const triggersPosture = kind != null && kind === def.bindKind;
+  const drive = routeForKind(target, kind);
+  const triggersPosture = drive != null;
 
   const updatedTarget = { ...target };
   let flags = { ...enc.flags };
@@ -449,18 +476,22 @@ export function applyCompanionAction(state, beastId, actionId) {
   let line = `${beast.name} uses ${actionId}.`;
 
   if (triggersPosture) {
-    updatedTarget.posture = def.bindPosture;
+    updatedTarget.posture = drive.posture;
+    if (drive.route === 'bold' && target.altBind) {
+      flags.agitated = true;
+    }
   }
 
   if (kind === 'reveal') {
     // Scent Read / Sense expose the true attunement (and reveal concealed beasts).
     codexHints = addHint(codexHints, target.id, target.primaryAttunement);
     line = triggersPosture
-      ? `${beast.name} flushes out ${target.name}: it responds to ${target.primaryAttunement}, now ${def.bindPosture}.`
+      ? `${beast.name} flushes out ${target.name}: it responds to ${target.primaryAttunement}, now ${drive.posture}.`
       : `${beast.name} reads ${target.name}: it responds to ${target.primaryAttunement}.`;
   } else if (triggersPosture) {
-    const verb = kind === 'corner' ? 'into a corner' : kind === 'stagger' ? 'off balance' : 'to the ground';
-    line = `${beast.name} forces ${target.name} ${verb}; it is ${def.bindPosture}.`;
+    const verb = drive.posture === 'cornered' ? 'into a corner' : drive.posture === 'staggered' ? 'off balance' : 'to the ground';
+    const agitate = drive.route === 'bold' && target.altBind ? ' Forcing it agitates the quarry.' : '';
+    line = `${beast.name} forces ${target.name} ${verb}; it is ${drive.posture}.${agitate}`;
   } else if (actionId === 'warning-bark') {
     flags.guardRaised = true;
     line = `${beast.name} barks a warning; the expedition steadies.`;

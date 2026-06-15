@@ -1144,3 +1144,21 @@ test('probing that same attunement on a NON-elite beast is still a wrong read', 
   assert.equal(s.currentEncounter.flags.altAttunementMatch, false);
   assert.equal(s.currentEncounter.escapeProgress, 1, 'wrong read raises escape risk');
 });
+
+test('a Dire beast is bindable via its patient route alone', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'storm');               // alt attunement
+  s = applyToolAction(s, 'bait-stake');          // ground -> alt posture 'grounded'
+  assert.equal(s.currentEncounter.target.captureState, 'bindable', 'patient route opens the window');
+  assert.equal(s.currentEncounter.flags.agitated, false, 'patient route does not agitate');
+});
+
+test('a Dire beast bound the bold way agitates the quarry', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'iron');                 // primary attunement
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // stagger -> bold posture
+  assert.equal(s.currentEncounter.target.captureState, 'bindable', 'bold route opens the window');
+  assert.equal(s.currentEncounter.flags.agitated, true, 'bold route agitates');
+});
