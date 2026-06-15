@@ -1030,3 +1030,31 @@ test('pressing a target that is not bindable does not raise press level', () => 
   s = pressCapture(s);
   assert.equal(s.currentEncounter.pressLevel, 0);
 });
+
+test('binding after pressing banks bonus Lore and a perfect-catch bond', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable, windowDecay now 1
+  s = pressCapture(s); // pressLevel 1, windowDecay 2 (still bindable)
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+  s = attemptCapture(s); // bind at pressLevel 1
+  s = extractExpedition(s);
+
+  // base 1*3 + depth 1 = 4; clean+fast bonus 3; press 1*2 = 2  => 9
+  assert.equal(s.result.loreEarned, 9);
+});
+
+test('a deeply pressed catch (level >= 2) arrives with an extra bond', () => {
+  let s = createInitialState({ roster: ['chain-maw'], fielded: ['mireback-tortoise', 'chain-maw'], encounterIds: ['chain-maw'], bonds: { 'chain-maw': 0 } });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable (Iron Hold from fielded chain-maw => no decay)
+  s = pressCapture(s); // 1
+  s = pressCapture(s); // 2 (no slip: Iron Hold)
+  assert.equal(s.currentEncounter.target.captureState, 'bindable');
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  // chain-maw is a dupe (already owned) so it fuses (+1); pressLevel>=2 adds a further +1;
+  // plus fielded-ally bond (+1). bonds: 0 +1(fielded) +1(fuse) +1(press) = 3
+  assert.equal(s.bonds['chain-maw'], 3);
+});

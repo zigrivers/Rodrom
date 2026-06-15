@@ -18,6 +18,9 @@ const FAST_CAPTURE_TURNS = 4;
 const DUPE_CONVERT_LORE = 2;
 // Elite "Dire" quarries (G3c) are worth this much bonus Lore on capture.
 const ELITE_LORE = 4;
+// Press-your-luck (greed): each press level banked on a capture is worth this
+// much bonus Lore; a catch pressed to level 2+ also deepens that species' bond.
+const PRESS_LORE = 2;
 
 // Deeper layers press harder: per-turn pressure rises with descent depth, so
 // frenzy and failure scale with depth (run structure, t9i.3).
@@ -91,13 +94,24 @@ function completeExpedition(state, rank) {
     if (grade.clean) bonusLore += CLEAN_CAPTURE_LORE;
     if (grade.fast) bonusLore += FAST_CAPTURE_LORE;
   }
+  // Press-your-luck payoff (greed): bonus Lore per press level, and a perfect
+  // catch (press level >= 2) deepens that species' bond.
+  let pressLore = 0;
+  for (let i = 0; i < bankedGrades.length; i += 1) {
+    const level = bankedGrades[i].pressLevel ?? 0;
+    pressLore += level * PRESS_LORE;
+    if (level >= 2) {
+      const id = bankedCaptures[i];
+      bonds[id] = (bonds[id] ?? 0) + 1;
+    }
+  }
   const captures = bankedCaptures.length;
   const cleanCaptures = bankedGrades.filter((grade) => grade.clean).length;
   const eliteCaptures = bankedGrades.filter((grade) => grade.elite).length;
   const omenLore = (state.omen?.lorePerCapture ?? 0) * captures;
   const dupeLore = dupesFused * DUPE_CONVERT_LORE;
   const eliteLore = eliteCaptures * ELITE_LORE;
-  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore;
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore;
   return {
     ...state,
     expeditionComplete: true,
@@ -554,7 +568,7 @@ export function attemptCapture(state) {
   return finalizeEncounterAction(
     {
       ...state,
-      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast, elite: target.elite === true }],
+      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast, elite: target.elite === true, pressLevel: enc.pressLevel ?? 0 }],
       party: {
         ...state.party,
         captures: [...state.party.captures, target.id],
