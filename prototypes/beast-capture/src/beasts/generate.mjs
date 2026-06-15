@@ -1,4 +1,4 @@
-import { normalizeBeast, PAIR_TWIN } from './schema.mjs';
+import { normalizeBeast, PAIR_TWIN, validateBeast } from './schema.mjs';
 
 // Deterministic alternate route for a Dire's second capture path: each bind kind maps to a
 // distinct fallback kind + its posture, so a derived dual-route is stable and test-friendly.
@@ -52,6 +52,38 @@ export function evolveVariant(base, stage) {
 
 function cap(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Expand an authored list into the full catalogued roster. Each authored record may carry an
+// `expand` directive: { evolve: [2,3], dire: true, regional: { stratum: attunement } }.
+// Deterministic, deduped, and fully validated — throws on a duplicate id, an orphan variant,
+// or an invalid record so a bad dataset fails loudly at build time.
+export function expandRoster(authored) {
+  const out = [];
+  const seen = new Set();
+  const push = (rec) => {
+    if (seen.has(rec.id)) throw new Error(`duplicate beast id: ${rec.id}`);
+    seen.add(rec.id);
+    out.push(rec);
+  };
+  for (const raw of authored) {
+    const base = normalizeBeast(raw);
+    push(base);
+    const ex = raw.expand ?? {};
+    for (const stage of ex.evolve ?? []) push(evolveVariant(base, stage));
+    if (ex.dire) push(direVariant(base));
+    for (const [stratum, attunement] of Object.entries(ex.regional ?? {})) {
+      push(regionalVariant(base, stratum, attunement));
+    }
+  }
+  for (const rec of out) {
+    if (rec.baseSpeciesId && !seen.has(rec.baseSpeciesId)) {
+      throw new Error(`orphan variant: ${rec.id} -> ${rec.baseSpeciesId}`);
+    }
+    const errs = validateBeast(rec);
+    if (errs.length) throw new Error(`invalid beast ${rec.id}: ${errs.join('; ')}`);
+  }
+  return out;
 }
 
 // Regional re-skin: same archetype, a different stratum's attunement (false lead re-pairs).
