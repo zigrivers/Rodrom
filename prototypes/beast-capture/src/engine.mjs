@@ -25,6 +25,12 @@ const PRESS_LORE = 2;
 // route — is worth this much bonus Lore and deepens that species' bond.
 const BOLD_CAPTURE_LORE = 2;
 
+// Bestiary bounties (collection goal): one-time Lore the first time each tier is
+// earned. Kept one-time so the collection goal doesn't inflate the run economy.
+const BESTIARY_BRONZE_LORE = 5;
+const BESTIARY_SILVER_LORE = 10;
+const BESTIARY_GOLD_LORE = 20;
+
 // Deeper layers press harder: per-turn pressure rises with descent depth, so
 // frenzy and failure scale with depth (run structure, t9i.3).
 export function pressurePerTurn(depth) {
@@ -118,19 +124,38 @@ function completeExpedition(state, rank) {
       bonds[id] = (bonds[id] ?? 0) + 1;
     }
   }
+  // Bestiary (collection goal): record tier milestones from banked captures and
+  // pay a one-time Lore bounty for each tier newly earned this run.
+  const bestiary = { ...(state.bestiary ?? {}) };
+  let bestiaryBounty = 0;
+  for (let i = 0; i < bankedCaptures.length; i += 1) {
+    const id = bankedCaptures[i];
+    const grade = bankedGrades[i];
+    const before = bestiary[id] ?? { bronze: false, silver: false, gold: false };
+    const after = {
+      bronze: true, // any banked capture earns Bronze
+      silver: before.silver || grade.clean === true,
+      gold: before.gold || grade.elite === true,
+    };
+    if (!before.bronze && after.bronze) bestiaryBounty += BESTIARY_BRONZE_LORE;
+    if (!before.silver && after.silver) bestiaryBounty += BESTIARY_SILVER_LORE;
+    if (!before.gold && after.gold) bestiaryBounty += BESTIARY_GOLD_LORE;
+    bestiary[id] = after;
+  }
   const captures = bankedCaptures.length;
   const cleanCaptures = bankedGrades.filter((grade) => grade.clean).length;
   const eliteCaptures = bankedGrades.filter((grade) => grade.elite).length;
   const omenLore = (state.omen?.lorePerCapture ?? 0) * captures;
   const dupeLore = dupesFused * DUPE_CONVERT_LORE;
   const eliteLore = eliteCaptures * ELITE_LORE;
-  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore + boldLore;
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore + boldLore + bestiaryBounty;
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, boldLore, forfeited },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, boldLore, bestiaryBounty, forfeited },
     roster,
     bonds,
+    bestiary,
     lore: (state.lore ?? 0) + loreEarned,
   };
 }

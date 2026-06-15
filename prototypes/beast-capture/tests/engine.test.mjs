@@ -128,7 +128,7 @@ test('the opener is fixed only on the first run; later runs vary it', () => {
 });
 
 test('a completed run earns lore from captures and depth reached', () => {
-  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0 });
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0, bestiary: { 'ashwing-moth': { bronze: true, silver: true, gold: false } } });
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
@@ -314,7 +314,7 @@ test('elite layers appear at depth and tag a tougher, richer quarry', () => {
 });
 
 test('capturing an elite quarry earns bonus Lore', () => {
-  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0, bestiary: { 'chain-maw': { bronze: true, silver: true, gold: true } } });
   // simulate an elite layer (depth 4)
   s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
   s = applyHeroProbe(s, 'iron');
@@ -843,7 +843,7 @@ test('only confirmed probes are recorded as codex hints', () => {
 // cme.3 — capture scoring: clean (no wrong reads) and fast (quick bind) captures
 // earn bonus Lore, and a cleanly captured new species arrives pre-bonded.
 test('a clean, fast capture earns bonus lore', () => {
-  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0 });
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0, bestiary: { 'ashwing-moth': { bronze: true, silver: true, gold: false } } });
   s = applyHeroProbe(s, 'ash'); // turn 1, correct read
   s = applyCompanionAction(s, 'grave-hound', 'harry'); // turn 2, corner
   s = attemptCapture(s); // turn 3 -> clean + fast
@@ -855,7 +855,7 @@ test('a clean, fast capture earns bonus lore', () => {
 });
 
 test('a sloppy capture (a wrong read) forfeits the clean bonus', () => {
-  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0 });
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0, bestiary: { 'ashwing-moth': { bronze: true, silver: false, gold: false } } });
   s = applyHeroProbe(s, 'storm'); // wrong read -> not clean
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
@@ -919,6 +919,7 @@ test('a duplicate capture converts the surplus into bonus Lore', () => {
     fielded: ['mireback-tortoise'],
     encounterIds: ['chain-maw'],
     lore: 0,
+    bestiary: { 'chain-maw': { bronze: true, silver: true, gold: false } },
   });
   s = applyHeroProbe(s, 'iron');
   s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
@@ -986,7 +987,7 @@ test('the Restless Deep omen raises the starting pressure of every layer', () =>
 });
 
 test('the Bountiful Vein omen adds bonus Lore per capture', () => {
-  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0, omen: 'bountiful-vein' });
+  let s = createInitialState({ encounterIds: ['ashwing-moth'], lore: 0, omen: 'bountiful-vein', bestiary: { 'ashwing-moth': { bronze: true, silver: true, gold: false } } });
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s); // clean + fast
@@ -1082,7 +1083,7 @@ test('pressing a target that is not bindable does not raise press level', () => 
 });
 
 test('binding after pressing banks bonus Lore and a perfect-catch bond', () => {
-  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0, bestiary: { 'chain-maw': { bronze: true, silver: true, gold: false } } });
   s = applyHeroProbe(s, 'iron');
   s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable, windowDecay now 1
   s = pressCapture(s); // pressLevel 1, windowDecay 2 (still bindable)
@@ -1208,7 +1209,7 @@ test('agitation from the bold route adds per-turn pressure', () => {
 });
 
 test('a bold-route elite capture banks bonus Lore and a bond', () => {
-  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0, bestiary: { 'chain-maw': { bronze: true, silver: true, gold: true } } });
   s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
   s = applyHeroProbe(s, 'iron');
   s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bold -> bindable
@@ -1222,7 +1223,7 @@ test('a bold-route elite capture banks bonus Lore and a bond', () => {
 });
 
 test('a patient-route elite capture is plain (no bold bonus)', () => {
-  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0, bestiary: { 'chain-maw': { bronze: true, silver: true, gold: true } } });
   s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
   s = applyHeroProbe(s, 'storm');
   s = applyToolAction(s, 'bait-stake'); // patient -> bindable
@@ -1253,4 +1254,42 @@ test('a Dire Veil Lynx stays single-path and captures via its reveal route', () 
   s = applyCompanionAction(s, 'grave-hound', 'scent-read'); // reveal -> posture revealed + attunement hint
   s = applyHeroProbe(s, 'veil');                            // lock in the revealed attunement
   assert.equal(s.currentEncounter.target.captureState, 'bindable', 'single-path concealed capture still works');
+});
+
+test('completing a run records bestiary tiers from banked captures', () => {
+  // clean capture of a normal chain-maw -> bronze + silver (clean), no gold (not elite)
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  assert.deepEqual(s.bestiary['chain-maw'], { bronze: true, silver: true, gold: false });
+});
+
+test('a newly-earned tier pays a one-time Lore bounty; re-earning pays nothing', () => {
+  const run = (bestiary) => {
+    let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0, bestiary });
+    s = applyHeroProbe(s, 'iron');
+    s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+    s = attemptCapture(s);
+    return extractExpedition(s);
+  };
+  const first = run({}); // earns bronze (+5) and silver (+10) = +15 bounty
+  assert.equal(first.result.bestiaryBounty, 15);
+
+  const again = run({ 'chain-maw': { bronze: true, silver: true, gold: false } }); // already earned
+  assert.equal(again.result.bestiaryBounty, 0);
+});
+
+test('forfeited captures do not update the bestiary', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw', 'storm-antler', 'veil-lynx'] });
+  // capture chain-maw but do NOT secure it (no anchor), then die on a fatal descent
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+  s = { ...s, party: { ...s.party, leader: { ...s.party.leader, health: 1 } } };
+  s = advanceEncounter(s); // carryover pressure kills the leader -> failure, chain-maw forfeited
+  assert.equal(s.result.rank, 'expedition-failure');
+  assert.equal(s.bestiary['chain-maw'], undefined, 'forfeited capture left no bestiary entry');
 });
