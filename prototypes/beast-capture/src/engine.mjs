@@ -115,7 +115,7 @@ function completeExpedition(state, rank) {
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, forfeited },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, forfeited },
     roster,
     bonds,
     lore: (state.lore ?? 0) + loreEarned,
