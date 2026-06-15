@@ -284,7 +284,9 @@ function resolveEncounterPressure(state) {
     // Grounding Aura (cme.2) scales its relief with bond depth (G2).
     const groundingBond = activePassives(state)['grounding-aura'];
     const grounding = groundingBond === undefined ? 0 : 1 + Math.floor(groundingBond / 2);
-    const newPressure = enc.pressure + Math.max(0, pressurePerTurn(enc.depth) - grounding);
+    // The bold route on a dual-path elite leaves the quarry agitated (adaptive-read).
+    const agitation = flags.agitated ? 1 : 0;
+    const newPressure = enc.pressure + Math.max(0, pressurePerTurn(enc.depth) + agitation - grounding);
     next = { ...next, currentEncounter: { ...next.currentEncounter, pressure: newPressure } };
 
     if (newPressure >= FRENZY_PRESSURE) {

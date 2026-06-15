@@ -1162,3 +1162,20 @@ test('a Dire beast bound the bold way agitates the quarry', () => {
   assert.equal(s.currentEncounter.target.captureState, 'bindable', 'bold route opens the window');
   assert.equal(s.currentEncounter.flags.agitated, true, 'bold route agitates');
 });
+
+test('agitation from the bold route adds per-turn pressure', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bold drive -> agitated
+  const pressureAfterBold = s.currentEncounter.pressure;
+
+  // a calm reference: same setup but the patient route (no agitation)
+  let c = createInitialState({ encounterIds: ['chain-maw'] });
+  c = { ...c, currentEncounter: { ...c.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  c = applyHeroProbe(c, 'storm');
+  c = applyToolAction(c, 'bait-stake'); // patient drive -> calm
+  const pressureAfterPatient = c.currentEncounter.pressure;
+
+  assert.ok(pressureAfterBold > pressureAfterPatient, 'agitation makes the bold line press harder');
+});
