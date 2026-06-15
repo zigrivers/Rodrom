@@ -28,9 +28,15 @@ test('renderApp exposes the browser-visible probes, tools, and beast actions for
 
 test('renderApp shows a start screen before the expedition begins', () => {
   const html = renderApp(createInitialState({ started: false }));
-  assert.match(html, /Beast Capture Prototype/);
+  assert.match(html, /Spiral Descent/);
   assert.match(html, /data-action="start-expedition"/);
   assert.doesNotMatch(html, /data-action="probe-ash"/);
+});
+
+test('the start screen frames the full loop, not just the capture slice (cme.8)', () => {
+  const html = renderApp(createInitialState({ started: false }));
+  assert.match(html, /descend/i);
+  assert.match(html, /roster|town|bond/i);
 });
 
 test('the town (start screen) shows lore and an upgrade option', () => {
@@ -230,6 +236,16 @@ test('renderApp offers a withdraw option during an active encounter', () => {
 test('the encounter view shows the current layer depth', () => {
   const html = renderApp(createInitialState({ encounterIds: ['chain-maw'] }));
   assert.match(html, /Layer 1/);
+});
+
+test('the encounter action bar is grouped, not a flat wall of buttons (cme.9)', () => {
+  const html = renderApp(createInitialState({ encounterIds: ['chain-maw'] }));
+  assert.match(html, /class="action-group"/);
+  assert.match(html, /Reads/);
+  assert.match(html, /Resolve/);
+  // all the underlying actions are still present, just organized
+  assert.match(html, /data-action="probe-iron"/);
+  assert.match(html, /data-action="capture"/);
 });
 
 test('the encounter view shows the active run omen (cme.6)', () => {
