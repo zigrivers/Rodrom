@@ -52,9 +52,28 @@ body {
 }
 
 .actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.action-group {
+  flex: 1 1 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: #1b2228;
+}
+
+.action-group h4 {
+  margin: 0 0 2px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
 }
 
 button {
@@ -93,8 +112,7 @@ button[disabled] {
     grid-template-columns: 1fr;
   }
 
-  .stats,
-  .actions {
+  .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

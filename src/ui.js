@@ -6,9 +6,10 @@ export function renderApp(state) {
   if (!state.started) {
     return `
       <section class="panel">
-        <h1>Beast Capture Prototype</h1>
-        <p>Lead a short expedition into the spiral. Read each beast, drive it into a
-        bindable posture, and capture it — or kill it, or withdraw before it costs you.</p>
+        <h1>Spiral Descent</h1>
+        <p>Descend the spiral one layer at a time. Read each beast and bind it to grow your
+        roster — then choose how deep to push before you extract. Between runs, your town
+        spends the Lore you earn and your captured allies deepen their bonds.</p>
         ${renderRoster(state.roster)}
         <h3>Town</h3>
         <p>Lore: ${state.lore}</p>
@@ -58,7 +59,7 @@ export function renderApp(state) {
   return `
     <div class="layout">
       <section class="panel">
-        <h1>Beast Capture Prototype</h1>
+        <h1>Spiral Descent</h1>
         <h2>${target.name}</h2>
         <p class="guidance">${captureGuidance(state)}</p>
         <div class="stats">
@@ -74,52 +75,70 @@ export function renderApp(state) {
           <p>Advance: ${advanceAllowed ? 'Ready' : 'Locked'}</p>
         </div>
         <div class="actions">
-          <button data-action="strike" ${renderDisabled(encounterResolved)}>Strike</button>
-          <button data-action="guard" ${renderDisabled(encounterResolved)}>Guard</button>
-          <button data-action="probe-ash" ${renderDisabled(encounterResolved)}>Probe Ash</button>
-          <button data-action="probe-iron" ${renderDisabled(encounterResolved)}>Probe Iron</button>
-          <button data-action="probe-storm" ${renderDisabled(encounterResolved)}>Probe Storm</button>
-          <button data-action="probe-veil" ${renderDisabled(encounterResolved)}>Probe Veil</button>
-          <button
-            data-action="tool-snare-line"
-            ${renderDisabled(encounterResolved || state.party.tools['snare-line'] === 0)}
-          >
-            Snare Line
-          </button>
-          <button
-            data-action="tool-bait-stake"
-            ${renderDisabled(encounterResolved || state.party.tools['bait-stake'] === 0)}
-          >
-            Bait Stake
-          </button>
-          ${
-            state.party.beasts['grave-hound']
-              ? `
-          <button data-action="hound-scent-read" ${renderDisabled(encounterResolved)}>Grave Hound: Scent Read</button>
-          <button data-action="hound-harry" ${renderDisabled(encounterResolved)}>Grave Hound: Harry</button>
-          <button data-action="hound-warning-bark" ${renderDisabled(encounterResolved)}>Grave Hound: Warning Bark</button>`
-              : ''
-          }
-          ${
-            state.party.beasts['mireback-tortoise']
-              ? `
-          <button data-action="mireback-brace" ${renderDisabled(encounterResolved)}>Mireback: Brace</button>
-          <button data-action="mireback-shove" ${renderDisabled(encounterResolved)}>Mireback: Shove</button>
-          <button data-action="mireback-burden-shelter" ${renderDisabled(encounterResolved)}>Mireback: Burden Shelter</button>`
-              : ''
-          }
-          ${Object.keys(state.party.beasts)
-            .filter((id) => CAPTURED_ALLY[id])
-            .map(
-              (id) =>
-                `<button data-action="companion:${id}:${CAPTURED_ALLY[id].action}" ${renderDisabled(encounterResolved)}>${state.party.beasts[id].name}: ${CAPTURED_ALLY[id].label}</button>`
-            )
-            .join('')}
-          <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
-          <button data-action="withdraw" ${renderDisabled(encounterResolved)}>Withdraw</button>
-          <button data-action="anchor" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored)}>Anchor (recover)</button>
-          <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Descend deeper</button>
-          <button data-action="extract" ${renderDisabled(!advanceAllowed)}>Extract (keep haul)</button>
+          <div class="action-group">
+            <h4>Reads</h4>
+            <button data-action="probe-ash" ${renderDisabled(encounterResolved)}>Probe Ash</button>
+            <button data-action="probe-iron" ${renderDisabled(encounterResolved)}>Probe Iron</button>
+            <button data-action="probe-storm" ${renderDisabled(encounterResolved)}>Probe Storm</button>
+            <button data-action="probe-veil" ${renderDisabled(encounterResolved)}>Probe Veil</button>
+          </div>
+          <div class="action-group">
+            <h4>Force &amp; Defense</h4>
+            <button data-action="strike" ${renderDisabled(encounterResolved)}>Strike</button>
+            <button data-action="guard" ${renderDisabled(encounterResolved)}>Guard</button>
+          </div>
+          <div class="action-group">
+            <h4>Tools</h4>
+            <button
+              data-action="tool-snare-line"
+              ${renderDisabled(encounterResolved || state.party.tools['snare-line'] === 0)}
+            >
+              Snare Line
+            </button>
+            <button
+              data-action="tool-bait-stake"
+              ${renderDisabled(encounterResolved || state.party.tools['bait-stake'] === 0)}
+            >
+              Bait Stake
+            </button>
+          </div>
+          <div class="action-group">
+            <h4>Allies</h4>
+            ${
+              state.party.beasts['grave-hound']
+                ? `
+            <button data-action="hound-scent-read" ${renderDisabled(encounterResolved)}>Grave Hound: Scent Read</button>
+            <button data-action="hound-harry" ${renderDisabled(encounterResolved)}>Grave Hound: Harry</button>
+            <button data-action="hound-warning-bark" ${renderDisabled(encounterResolved)}>Grave Hound: Warning Bark</button>`
+                : ''
+            }
+            ${
+              state.party.beasts['mireback-tortoise']
+                ? `
+            <button data-action="mireback-brace" ${renderDisabled(encounterResolved)}>Mireback: Brace</button>
+            <button data-action="mireback-shove" ${renderDisabled(encounterResolved)}>Mireback: Shove</button>
+            <button data-action="mireback-burden-shelter" ${renderDisabled(encounterResolved)}>Mireback: Burden Shelter</button>`
+                : ''
+            }
+            ${Object.keys(state.party.beasts)
+              .filter((id) => CAPTURED_ALLY[id])
+              .map(
+                (id) =>
+                  `<button data-action="companion:${id}:${CAPTURED_ALLY[id].action}" ${renderDisabled(encounterResolved)}>${state.party.beasts[id].name}: ${CAPTURED_ALLY[id].label}</button>`
+              )
+              .join('')}
+          </div>
+          <div class="action-group">
+            <h4>Resolve</h4>
+            <button data-action="capture" ${renderDisabled(encounterResolved || captureDisabled)}>Capture</button>
+            <button data-action="withdraw" ${renderDisabled(encounterResolved)}>Withdraw</button>
+          </div>
+          <div class="action-group">
+            <h4>Between layers</h4>
+            <button data-action="anchor" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored)}>Anchor (recover)</button>
+            <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Descend deeper</button>
+            <button data-action="extract" ${renderDisabled(!advanceAllowed)}>Extract (keep haul)</button>
+          </div>
         </div>
       </section>
       <aside class="panel">
