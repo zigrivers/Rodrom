@@ -1,6 +1,6 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
 import { canAdvanceEncounter, tensionLabel } from './engine.mjs';
-import { upgradeCost, UPGRADES, fieldCap } from './state.mjs';
+import { upgradeCost, UPGRADES, fieldCap, bestiaryComplete } from './state.mjs';
 
 export function renderApp(state) {
   if (!state.started) {
@@ -11,12 +11,14 @@ export function renderApp(state) {
         roster — then choose how deep to push before you extract. Between runs, your town
         spends the Lore you earn and your captured allies deepen their bonds.</p>
         ${renderRoster(state.roster)}
+        <h3>Bestiary</h3>
+        ${renderBestiary(state.bestiary)}
         <h3>Town</h3>
         <p>Lore: ${state.lore}</p>
         ${renderTownUpgrades(state)}
         <h3>Party — who do you field?</h3>
         <p>Each beast brings different actions, so your party decides which captures are even possible.</p>
-        ${renderPartyPicker(state.fielded, state.roster, state.bonds, fieldCap(state.upgrades))}
+        ${renderPartyPicker(state.fielded, state.roster, state.bonds, fieldCap(state.upgrades, state.bestiary))}
         ${renderCoachToggle(state)}
         <button data-action="start-expedition">Start Expedition</button>
       </section>
@@ -228,6 +230,25 @@ function renderPartyPicker(fielded, roster, bonds = {}, cap = 4) {
     })
     .join('');
   return `${header}${rows}`;
+}
+
+function renderBestiary(bestiary) {
+  const b = bestiary ?? {};
+  const ids = ['ashwing-moth', 'chain-maw', 'veil-lynx', 'storm-antler'];
+  let earned = 0;
+  const rows = ids
+    .map((id) => {
+      const t = b[id] ?? { bronze: false, silver: false, gold: false };
+      const cells = [t.bronze, t.silver, t.gold];
+      earned += cells.filter(Boolean).length;
+      const rank = cells.map((s) => (s ? '★' : '☆')).join('');
+      const name = TARGET_BEASTS[id]?.name ?? id;
+      const blurb = TARGET_BEASTS[id]?.blurb ?? '';
+      return `<div><strong>${name}</strong> ${rank} — <em>${blurb}</em><br><small>Bronze ${t.bronze ? '✓' : '·'} caught · Silver ${t.silver ? '✓' : '·'} clean · Gold ${t.gold ? '✓' : '·'} Dire</small></div>`;
+    })
+    .join('');
+  const badge = bestiaryComplete(b) ? ' — <strong>Master Tamer</strong>' : '';
+  return `<p>Bestiary: ${earned}/12 ★${badge}</p>${rows}`;
 }
 
 function renderRoster(roster) {
