@@ -1,4 +1,4 @@
-import { createInitialState, buildEncounterOrder, buyUpgrade } from './state.mjs';
+import { createInitialState, buildEncounterOrder, buyUpgrade, toggleFielded } from './state.mjs';
 import { OMENS } from './content.mjs';
 import {
   applyHeroProbe,
@@ -161,9 +161,7 @@ document.addEventListener('click', (event) => {
         state = applyCompanionAction(state, beastId, actionId);
       } else if (button.dataset.action.startsWith('toggle-')) {
         const beastId = button.dataset.action.slice('toggle-'.length);
-        const fielded = state.fielded.includes(beastId)
-          ? state.fielded.filter((id) => id !== beastId)
-          : [...state.fielded, beastId];
+        const fielded = toggleFielded(state.fielded, beastId);
         state = createInitialState({
           started: false,
           roster: state.roster,
