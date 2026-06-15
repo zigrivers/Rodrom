@@ -419,3 +419,20 @@ test('single-path beasts keep their normal one-route coaching', () => {
   const html = renderApp(createInitialState({ encounterIds: ['chain-maw'] })); // depth 1, single-path
   assert.doesNotMatch(html, /two ways in/i);
 });
+
+test('the town shows the bestiary with star ranks', () => {
+  const html = renderApp(createInitialState({
+    started: false,
+    bestiary: { 'chain-maw': { bronze: true, silver: true, gold: false } },
+  }));
+  assert.match(html, /Bestiary:/);
+  assert.match(html, /Chain Maw/);
+  assert.match(html, /★★☆/);
+});
+
+test('the Master Tamer badge shows only when the bestiary is complete', () => {
+  const all = { bronze: true, silver: true, gold: true };
+  const complete = { 'ashwing-moth': all, 'chain-maw': all, 'veil-lynx': all, 'storm-antler': all };
+  assert.match(renderApp(createInitialState({ started: false, bestiary: complete })), /Master Tamer/i);
+  assert.doesNotMatch(renderApp(createInitialState({ started: false })), /Master Tamer/i);
+});

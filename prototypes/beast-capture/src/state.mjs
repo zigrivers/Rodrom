@@ -48,8 +48,22 @@ export const FIELD_CAP = 4;
 
 // The Kennel town service (G3b) raises the field cap, so Lore buys more passives
 // in play — a run-changing sink, not just a stat bump.
-export function fieldCap(upgrades) {
-  return FIELD_CAP + (upgrades?.kennel ?? 0);
+export function fieldCap(upgrades, bestiary) {
+  return FIELD_CAP + (upgrades?.kennel ?? 0) + (bestiaryComplete(bestiary) ? 1 : 0);
+}
+
+// Bestiary completeness (collection goal). A species is complete when all three
+// tiers (Bronze/Silver/Gold) are earned; the Bestiary is complete when all four
+// capturable species are complete.
+const BESTIARY_SPECIES = ['ashwing-moth', 'chain-maw', 'veil-lynx', 'storm-antler'];
+
+export function speciesComplete(bestiary, id) {
+  const t = (bestiary ?? {})[id];
+  return Boolean(t && t.bronze && t.silver && t.gold);
+}
+
+export function bestiaryComplete(bestiary) {
+  return BESTIARY_SPECIES.every((id) => speciesComplete(bestiary, id));
 }
 
 export function toggleFielded(fielded, id, cap = FIELD_CAP) {
@@ -96,6 +110,7 @@ export function buyUpgrade(state, key) {
     started: false,
     roster: state.roster,
     bonds: state.bonds,
+    bestiary: state.bestiary,
     fielded: state.fielded,
     coach: state.coach,
     lore: state.lore - cost,
@@ -206,6 +221,8 @@ export function createInitialState(options = {}) {
     roster: options.roster ?? [],
     // Bond level per captured beast (times fielded), carried across runs.
     bonds: options.bonds ?? {},
+    // Persistent Bestiary: per-species Bronze/Silver/Gold tiers (collection goal).
+    bestiary: options.bestiary ?? {},
     // Town currency and persistent upgrades, carried across runs.
     lore: options.lore ?? 0,
     upgrades,

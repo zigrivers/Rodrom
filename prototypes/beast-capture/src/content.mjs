@@ -77,6 +77,7 @@ export const TARGET_BEASTS = {
     altBind: { attunement: 'iron', bindKind: 'stagger', bindPosture: 'staggered' },
     initialCaptureState: 'unreadable',
     maxHealth: 2,
+    blurb: 'A moth of cinders; its wings scatter blinding ash.',
   },
   'chain-maw': {
     id: 'chain-maw',
@@ -89,6 +90,7 @@ export const TARGET_BEASTS = {
     altBind: { attunement: 'storm', bindKind: 'ground', bindPosture: 'grounded' },
     initialCaptureState: 'unreadable',
     maxHealth: 4,
+    blurb: 'Iron-jawed and relentless — it drags its own broken chains.',
   },
   'veil-lynx': {
     id: 'veil-lynx',
@@ -101,6 +103,7 @@ export const TARGET_BEASTS = {
     concealed: true,
     initialCaptureState: 'unreadable',
     maxHealth: 3,
+    blurb: 'Half-seen at the edge of torchlight; gone when looked at.',
   },
   'storm-antler': {
     id: 'storm-antler',
@@ -113,6 +116,7 @@ export const TARGET_BEASTS = {
     altBind: { attunement: 'iron', bindKind: 'stagger', bindPosture: 'staggered' },
     initialCaptureState: 'unreadable',
     maxHealth: 5,
+    blurb: 'Its antlers hum before the strike; the air tastes of lightning.',
   },
 };
 
