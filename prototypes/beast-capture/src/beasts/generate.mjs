@@ -25,7 +25,7 @@ export function direVariant(base) {
     id: `${base.id}-dire`,
     name: `Dire ${base.name}`,
     rank: 'dire',
-    baseSpeciesId: base.id,
+    baseSpeciesId: base.baseSpeciesId ?? base.id, // root id survives variant chaining
     authored: false,
     maxHealth: base.maxHealth + 2,
     altBind: base.altBind ?? deriveAltBind(base),
@@ -43,7 +43,7 @@ export function evolveVariant(base, stage) {
     id: `${base.id}-s${stage}`,
     name: epithet ? `${base.name} (${epithet})` : base.name,
     stage,
-    baseSpeciesId: base.id,
+    baseSpeciesId: base.baseSpeciesId ?? base.id, // root id survives variant chaining
     authored: false,
     maxHealth: base.maxHealth + (stage - 1),
     concealed: stage >= 3 ? true : base.concealed,
@@ -63,7 +63,7 @@ export function regionalVariant(base, stratum, newAttunement) {
     stratum,
     primaryAttunement: newAttunement,
     falseLead: PAIR_TWIN[newAttunement] ?? null,
-    baseSpeciesId: base.id,
+    baseSpeciesId: base.baseSpeciesId ?? base.id, // root id survives variant chaining
     authored: false,
   });
 }
