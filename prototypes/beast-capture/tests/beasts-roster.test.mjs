@@ -30,6 +30,11 @@ test('expandRoster throws on a duplicate authored id', () => {
   assert.throws(() => expandRoster(dupes), /duplicate beast id/);
 });
 
+test('expandRoster surfaces a validateBeast failure on an invalid authored record', () => {
+  const bad = [{ ...authored[0], genus: 'Wombats' }];
+  assert.throws(() => expandRoster(bad), /invalid beast.*Wombats/);
+});
+
 test('the authored dataset expands cleanly and is engine-projectable', () => {
   const roster = expandRoster(AUTHORED); // throws if any record is invalid/duplicate
   assert.ok(roster.length >= AUTHORED.length, 'roster includes at least the authored bases');
