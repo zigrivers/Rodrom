@@ -418,6 +418,55 @@ test('relentless reckless pressure can lose the leader and fail the expedition',
   assert.equal(s.result.rank, 'expedition-failure');
 });
 
+// G1 (checkpoint stakes) — Anchors secure the haul; dying forfeits the
+// captures made since the last Anchor, while extracting secures everything.
+test('anchoring secures the captures made so far', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  assert.equal(s.securedCount, 0, 'captures start unsecured');
+
+  s = anchorExpedition(s);
+  assert.equal(s.securedCount, 1, 'anchoring secures the haul so far');
+});
+
+test('dying forfeits unsecured captures but keeps anchored (secured) ones', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'storm-antler'] });
+  // Layer 1: capture Ashwing, then Anchor to secure it.
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = anchorExpedition(s);
+  s = advanceEncounter(s); // depth 2: Chain Maw
+
+  // Layer 2: capture Chain Maw — unsecured (no Anchor after it).
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s);
+
+  // Force the leader to the brink, then descend into a fatal carryover.
+  s = { ...s, party: { ...s.party, leader: { ...s.party.leader, health: 1 } } };
+  s = advanceEncounter(s);
+
+  assert.equal(s.expeditionComplete, true);
+  assert.equal(s.result.rank, 'expedition-failure');
+  assert.ok(s.roster.includes('ashwing-moth'), 'secured capture is kept');
+  assert.ok(!s.roster.includes('chain-maw'), 'unsecured capture is forfeited');
+  assert.equal(s.result.forfeited, 1);
+});
+
+test('extracting secures the whole haul, even captures made after the last anchor', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = extractExpedition(s); // no anchor, but extract secures all
+
+  assert.ok(s.roster.includes('ashwing-moth'));
+  assert.equal(s.result.forfeited, 0);
+});
+
 test('a staked snare line holds the beast so bad reads cannot make it flee', () => {
   let s = createInitialState({ encounterIds: ['chain-maw'] });
   s = applyToolAction(s, 'snare-line');
