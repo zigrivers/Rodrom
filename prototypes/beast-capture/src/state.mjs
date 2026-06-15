@@ -48,8 +48,8 @@ export const FIELD_CAP = 4;
 
 // The Kennel town service (G3b) raises the field cap, so Lore buys more passives
 // in play — a run-changing sink, not just a stat bump.
-export function fieldCap(upgrades) {
-  return FIELD_CAP + (upgrades?.kennel ?? 0);
+export function fieldCap(upgrades, bestiary) {
+  return FIELD_CAP + (upgrades?.kennel ?? 0) + (bestiaryComplete(bestiary) ? 1 : 0);
 }
 
 // Bestiary completeness (collection goal). A species is complete when all three

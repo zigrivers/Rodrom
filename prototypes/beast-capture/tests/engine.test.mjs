@@ -1294,6 +1294,16 @@ test('forfeited captures do not update the bestiary', () => {
   assert.equal(s.bestiary['chain-maw'], undefined, 'forfeited capture left no bestiary entry');
 });
 
+test('completing the bestiary raises the field cap (Master Tamer capstone)', () => {
+  const all = { bronze: true, silver: true, gold: true };
+  const complete = { 'ashwing-moth': all, 'chain-maw': all, 'veil-lynx': all, 'storm-antler': all };
+  assert.equal(fieldCap({}, {}), 4, 'base cap with no capstone');
+  assert.equal(fieldCap({ kennel: 1 }, {}), 5, 'kennel still adds');
+  assert.equal(fieldCap({}, complete), 5, 'Master Tamer adds +1');
+  assert.equal(fieldCap({ kennel: 1 }, complete), 6, 'kennel + capstone stack');
+  assert.equal(fieldCap({}), 4, 'undefined bestiary -> no capstone (back-compat)');
+});
+
 test('a completed species gets +1 effective bond for its passive', () => {
   const all = { bronze: true, silver: true, gold: true };
   const reliefAtDepth5 = (bestiary) => {
