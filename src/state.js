@@ -233,6 +233,7 @@ export function createInitialState(options = {}) {
       riskLevel: 0,
       escapeProgress: 0,
       windowDecay: 0,
+      pressLevel: 0,
       structures: [],
       flags: {
         attunementMatch: false,
