@@ -32,3 +32,38 @@ export function direVariant(base) {
     tierGold: 'dire',
   });
 }
+
+const STAGE_EPITHET = { 2: 'Risen', 3: 'Elder' };
+
+// Evolution / depth-form: tougher, harder to read. Stage 3 gains concealment.
+export function evolveVariant(base, stage) {
+  const epithet = STAGE_EPITHET[stage];
+  return normalizeBeast({
+    ...base,
+    id: `${base.id}-s${stage}`,
+    name: epithet ? `${base.name} (${epithet})` : base.name,
+    stage,
+    baseSpeciesId: base.id,
+    authored: false,
+    maxHealth: base.maxHealth + (stage - 1),
+    concealed: stage >= 3 ? true : base.concealed,
+  });
+}
+
+function cap(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Regional re-skin: same archetype, a different stratum's attunement (false lead re-pairs).
+export function regionalVariant(base, stratum, newAttunement) {
+  return normalizeBeast({
+    ...base,
+    id: `${base.id}-${stratum}`,
+    name: `${cap(newAttunement)}-touched ${base.name}`,
+    stratum,
+    primaryAttunement: newAttunement,
+    falseLead: PAIR_TWIN[newAttunement] ?? null,
+    baseSpeciesId: base.id,
+    authored: false,
+  });
+}
