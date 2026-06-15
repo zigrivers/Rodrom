@@ -1,11 +1,19 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY, OMENS } from './content.mjs';
 
+// Elite "Dire" quarries appear at deep layers (G3c): every 4th layer surfaces a
+// tougher, richer variant, so descending introduces interest, not just bigger numbers.
+export function isEliteDepth(depth) {
+  return (depth ?? 1) >= 4 && (depth ?? 1) % 4 === 0;
+}
+
 export function createTargetState(targetId, depth = 1) {
   const target = TARGET_BEASTS[targetId];
-  const maxHealth = target.maxHealth + (depth - 1);
+  const elite = isEliteDepth(depth);
+  const maxHealth = target.maxHealth + (depth - 1) + (elite ? 2 : 0);
   return {
     id: target.id,
-    name: target.name,
+    name: elite ? `Dire ${target.name}` : target.name,
+    elite,
     primaryAttunement: target.primaryAttunement,
     falseLead: target.falseLead,
     health: maxHealth,
@@ -37,6 +45,12 @@ const FIELDABLE = ['grave-hound', 'mireback-tortoise'];
 // run?" choice rather than fielding everything.
 export const FIELD_CAP = 4;
 
+// The Kennel town service (G3b) raises the field cap, so Lore buys more passives
+// in play — a run-changing sink, not just a stat bump.
+export function fieldCap(upgrades) {
+  return FIELD_CAP + (upgrades?.kennel ?? 0);
+}
+
 export function toggleFielded(fielded, id, cap = FIELD_CAP) {
   if (fielded.includes(id)) {
     return fielded.filter((beastId) => beastId !== id);
@@ -58,10 +72,14 @@ export const UPGRADES = {
   infirmary: { name: 'Infirmary', describe: '+1 Leader max HP' },
   quartermaster: { name: 'Quartermaster', describe: '+1 use of each field tool per run' },
   'scouts-lantern': { name: "Scout's Lantern", describe: "Begin each run knowing the next quarries' attunements" },
+  kennel: { name: 'Kennel', describe: '+1 beast you can field per run' },
 };
 
+// A steeper (quadratic) curve so Lore keeps its weight as the campaign grows
+// (G3b). Level 0 stays cheap (5) to keep the first upgrade accessible.
 export function upgradeCost(key, level) {
-  return 5 + (level ?? 0) * 5;
+  const l = level ?? 0;
+  return 5 * (l + 1) * (l + 1);
 }
 
 export function buyUpgrade(state, key) {
