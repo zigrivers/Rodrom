@@ -296,8 +296,8 @@ test('capturing an elite quarry earns bonus Lore', () => {
   s = extractExpedition(s);
 
   assert.equal(s.result.eliteCaptures, 1);
-  // base 1*3 + depth 4 + clean/fast 3 + elite 4 = 14
-  assert.equal(s.result.loreEarned, 14);
+  // base 1*3 + depth 4 + clean/fast 3 + elite 4 + bold 2 = 16 (iron+shove = bold route)
+  assert.equal(s.result.loreEarned, 16);
 });
 
 // G3a — a field cap makes composition a real trade-off: with a full roster you
@@ -1114,4 +1114,116 @@ test('pressing while pressure is high can frenzy and wound the leader', () => {
     s = pressCapture(s);
   }
   assert.ok(s.party.leader.health < hp0, 'a frenzy during a long press wounded the leader');
+});
+
+test('dual-path altBind activates only for non-concealed elites', () => {
+  const normal = createTargetState('chain-maw', 1);
+  assert.equal(normal.altBind, null, 'normal beast is single-path');
+
+  const elite = createTargetState('chain-maw', 4); // isEliteDepth(4) === true
+  assert.deepEqual(elite.altBind, { attunement: 'storm', bindKind: 'ground', bindPosture: 'grounded' });
+
+  const direVeil = createTargetState('veil-lynx', 4); // concealed -> excluded
+  assert.equal(direVeil.altBind, null, 'concealed elite stays single-path');
+});
+
+test('probing the alt attunement on a Dire beast reads as a valid alt match', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'storm'); // alt attunement for Dire Chain Maw
+
+  assert.equal(s.currentEncounter.flags.altAttunementMatch, true, 'alt read registered');
+  assert.equal(s.currentEncounter.escapeProgress ?? 0, 0, 'a valid alt read is not a wrong read');
+  assert.ok((s.codexHints['chain-maw'] ?? []).includes('storm'), 'alt read recorded as a clue');
+});
+
+test('probing that same attunement on a NON-elite beast is still a wrong read', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] }); // depth 1, not elite, altBind null
+  s = applyHeroProbe(s, 'storm'); // wrong for a normal Chain Maw (it answers to iron)
+
+  assert.equal(s.currentEncounter.flags.altAttunementMatch, false);
+  assert.equal(s.currentEncounter.escapeProgress, 1, 'wrong read raises escape risk');
+});
+
+test('a Dire beast is bindable via its patient route alone', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'storm');               // alt attunement
+  s = applyToolAction(s, 'bait-stake');          // ground -> alt posture 'grounded'
+  assert.equal(s.currentEncounter.target.captureState, 'bindable', 'patient route opens the window');
+  assert.equal(s.currentEncounter.flags.agitated, false, 'patient route does not agitate');
+});
+
+test('a Dire beast bound the bold way agitates the quarry', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'iron');                 // primary attunement
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // stagger -> bold posture
+  assert.equal(s.currentEncounter.target.captureState, 'bindable', 'bold route opens the window');
+  assert.equal(s.currentEncounter.flags.agitated, true, 'bold route agitates');
+});
+
+test('agitation from the bold route adds per-turn pressure', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bold drive -> agitated
+  const pressureAfterBold = s.currentEncounter.pressure;
+
+  // a calm reference: same setup but the patient route (no agitation)
+  let c = createInitialState({ encounterIds: ['chain-maw'] });
+  c = { ...c, currentEncounter: { ...c.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  c = applyHeroProbe(c, 'storm');
+  c = applyToolAction(c, 'bait-stake'); // patient drive -> calm
+  const pressureAfterPatient = c.currentEncounter.pressure;
+
+  assert.ok(pressureAfterBold > pressureAfterPatient, 'agitation makes the bold line press harder');
+});
+
+test('a bold-route elite capture banks bonus Lore and a bond', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bold -> bindable
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  // bond: clean-capture pre-bond (+1, cme.3) + bold-route bond (+1) = 2
+  assert.equal(s.bonds['chain-maw'], 2, 'bold catch deepens the bond beyond the clean pre-bond');
+  // base 1*3 + depth 4 = 7; elite +4; clean/fast +3; bold +2 => 16 (no dupe; chain-maw is new)
+  assert.equal(s.result.loreEarned, 16);
+});
+
+test('a patient-route elite capture is plain (no bold bonus)', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'storm');
+  s = applyToolAction(s, 'bait-stake'); // patient -> bindable
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  // bond: only the clean-capture pre-bond (+1, cme.3) — NO bold-route bond
+  assert.equal(s.bonds['chain-maw'], 1, 'patient catch grants only the clean pre-bond, not the bold bond');
+  // base 1*3 + depth 4 = 7; elite +4; clean +2 (no wrong reads); fast +1 (bind on turn 3) => 14
+  assert.equal(s.result.loreEarned, 14);
+});
+
+test('a truly-wrong read (neither route) still escapes a dual-path elite', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  // Dire Chain Maw answers to iron (bold) or storm (patient); veil is neither.
+  s = applyHeroProbe(s, 'veil');
+  s = applyHeroProbe(s, 'veil');
+  s = applyHeroProbe(s, 'veil');
+  assert.equal(s.currentEncounter.target.captureState, 'escaped', 'wrong reads still escape on a Dire beast');
+});
+
+test('a Dire Veil Lynx stays single-path and captures via its reveal route', () => {
+  let s = createInitialState({ encounterIds: ['veil-lynx'] }); // default party fields grave-hound + mireback
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('veil-lynx', 4) } };
+  assert.equal(s.currentEncounter.target.altBind, null, 'concealed elite has no alt route');
+
+  s = applyCompanionAction(s, 'grave-hound', 'scent-read'); // reveal -> posture revealed + attunement hint
+  s = applyHeroProbe(s, 'veil');                            // lock in the revealed attunement
+  assert.equal(s.currentEncounter.target.captureState, 'bindable', 'single-path concealed capture still works');
 });
