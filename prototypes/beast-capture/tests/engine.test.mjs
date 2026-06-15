@@ -327,6 +327,21 @@ test('capturing an elite quarry earns bonus Lore', () => {
   assert.equal(s.result.loreEarned, 16);
 });
 
+test('a clean Dire catch lights all three bestiary tiers at once and pays every bounty', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 }); // fresh bestiary (all tiers unearned)
+  // simulate an elite layer (depth 4) so the quarry is a Dire (gold-eligible) variant
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'iron'); // correct read -> clean (no wrong reads)
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bold route -> staggered
+  s = attemptCapture(s); // clean + Dire (elite)
+  s = extractExpedition(s);
+
+  // Tiers are independent: one clean Dire catch lights Bronze + Silver + Gold together.
+  assert.deepEqual(s.bestiary['chain-maw'], { bronze: true, silver: true, gold: true });
+  // All three newly earned this run -> Bronze 5 + Silver 10 + Gold 20 = 35 one-time bounty.
+  assert.equal(s.result.bestiaryBounty, 35);
+});
+
 // G3a — a field cap makes composition a real trade-off: with a full roster you
 // must choose which passives to bring, not field everything.
 test('fielding is capped so composition is a real choice', () => {
