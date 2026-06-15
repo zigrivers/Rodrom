@@ -12,7 +12,6 @@ import {
 } from '../src/state.mjs';
 import {
   advanceEncounter,
-  anchorExpedition,
   anchorHeal,
   applyCompanionAction,
   applyGuardAction,
@@ -558,15 +557,15 @@ test('relentless reckless pressure can lose the leader and fail the expedition',
 
 // G1 (checkpoint stakes) — Anchors secure the haul; dying forfeits the
 // captures made since the last Anchor, while extracting secures everything.
-test('anchoring secures the captures made so far', () => {
+test('securing locks in the captures made so far', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
   assert.equal(s.securedCount, 0, 'captures start unsecured');
 
-  s = anchorExpedition(s);
-  assert.equal(s.securedCount, 1, 'anchoring secures the haul so far');
+  s = secureHaul(s);
+  assert.equal(s.securedCount, 1, 'securing banks the haul so far');
 });
 
 test('dying forfeits unsecured captures but keeps anchored (secured) ones', () => {
@@ -575,7 +574,7 @@ test('dying forfeits unsecured captures but keeps anchored (secured) ones', () =
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = anchorExpedition(s);
+  s = secureHaul(s);
   s = advanceEncounter(s); // depth 2: Chain Maw
 
   // Layer 2: capture Chain Maw — unsecured (no Anchor after it).
@@ -636,19 +635,19 @@ test('anchor recovery thins with depth', () => {
   assert.equal(anchorHeal(5), 1);
 });
 
-test('anchoring sheds beast fatigue and marks the layer anchored', () => {
+test('recovering sheds beast fatigue and marks the layer anchored', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
   assert.equal(s.party.beasts['grave-hound'].fatigue, 1);
 
-  s = anchorExpedition(s);
+  s = recoverAtLayer(s);
   assert.equal(s.party.beasts['grave-hound'].fatigue, 0);
   assert.equal(s.currentEncounter.anchored, true);
 });
 
-test('anchoring heals a wounded leader, capped at max', () => {
+test('recovering heals a wounded leader, capped at max', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw', 'storm-antler'] });
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
@@ -659,21 +658,24 @@ test('anchoring heals a wounded leader, capped at max', () => {
   s = attemptCapture(s);
 
   const before = s.party.leader.health;
-  s = anchorExpedition(s);
+  s = recoverAtLayer(s);
   assert.ok(s.party.leader.health > before);
   assert.ok(s.party.leader.health <= s.party.leader.maxHealth);
 });
 
-test('anchoring is unavailable until the layer is resolved and only once per layer', () => {
-  let s = createInitialState({ encounterIds: ['chain-maw'] });
-  assert.equal(anchorExpedition(s), s); // unresolved
+test('an anchor is gated until the layer is resolved and is once per layer', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  assert.equal(recoverAtLayer(s), s, 'unresolved -> no-op');
+  assert.equal(secureHaul(s), s, 'unresolved -> no-op');
 
-  s = applyHeroProbe(s, 'iron');
-  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
-  s = anchorExpedition(s);
+
+  s = recoverAtLayer(s); // spends the layer's single anchor
   const anchored = s;
-  assert.equal(anchorExpedition(s), anchored); // already anchored -> no-op
+  assert.equal(secureHaul(s), anchored, 'cannot also secure after recovering');
+  assert.equal(recoverAtLayer(s), anchored, 'cannot recover twice');
 });
 
 test('the descent is endless: descending past the planned layers never auto-completes', () => {

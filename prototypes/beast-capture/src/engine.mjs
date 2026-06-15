@@ -627,41 +627,6 @@ export function recoverAtLayer(state) {
   );
 }
 
-// Anchors (E3): a recovery checkpoint between layers. Once a layer is resolved,
-// the expedition can anchor to heal the leader and shed beast fatigue before
-// deciding to descend or extract. Available once per layer.
-export function anchorExpedition(state) {
-  if (state.expeditionComplete || !canAdvanceEncounter(state) || state.currentEncounter.anchored) {
-    return state;
-  }
-
-  const heal = anchorHeal(state.currentEncounter.depth);
-  const leader = {
-    ...state.party.leader,
-    health: Math.min(state.party.leader.maxHealth, state.party.leader.health + heal),
-  };
-  const beasts = Object.fromEntries(
-    Object.entries(state.party.beasts).map(([id, beast]) => [
-      id,
-      { ...beast, fatigue: Math.max(0, beast.fatigue - 2) },
-    ])
-  );
-
-  const secured = state.party.captures.length; // G1: anchoring banks the haul so far
-  const newlySecured = secured - (state.securedCount ?? 0);
-  return appendLog(
-    {
-      ...state,
-      securedCount: secured,
-      party: { ...state.party, leader, beasts },
-      currentEncounter: { ...state.currentEncounter, anchored: true },
-    },
-    `The expedition anchors at layer ${state.currentEncounter.depth}: it heals, steadies, and secures its haul${
-      newlySecured > 0 ? ` (${newlySecured} capture${newlySecured === 1 ? '' : 's'} locked in)` : ''
-    } (recovery thins deeper down).`
-  );
-}
-
 // Extract or Commit (E2): once a layer is resolved, end the run now and bank the
 // haul (safe), instead of descending deeper into harder layers.
 export function extractExpedition(state) {
