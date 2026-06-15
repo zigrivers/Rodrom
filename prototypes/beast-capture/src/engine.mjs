@@ -21,6 +21,9 @@ const ELITE_LORE = 4;
 // Press-your-luck (greed): each press level banked on a capture is worth this
 // much bonus Lore; a catch pressed to level 2+ also deepens that species' bond.
 const PRESS_LORE = 2;
+// A "bold" capture of a dual-path elite (adaptive-read) — the daring, agitating
+// route — is worth this much bonus Lore and deepens that species' bond.
+const BOLD_CAPTURE_LORE = 2;
 
 // Deeper layers press harder: per-turn pressure rises with descent depth, so
 // frenzy and failure scale with depth (run structure, t9i.3).
@@ -105,13 +108,23 @@ function completeExpedition(state, rank) {
       bonds[id] = (bonds[id] ?? 0) + 1;
     }
   }
+  // Bold-route capture of a dual-path elite (adaptive-read): a daring catch pays
+  // bonus Lore and deepens the bond.
+  let boldLore = 0;
+  for (let i = 0; i < bankedGrades.length; i += 1) {
+    if (bankedGrades[i].route === 'bold') {
+      boldLore += BOLD_CAPTURE_LORE;
+      const id = bankedCaptures[i];
+      bonds[id] = (bonds[id] ?? 0) + 1;
+    }
+  }
   const captures = bankedCaptures.length;
   const cleanCaptures = bankedGrades.filter((grade) => grade.clean).length;
   const eliteCaptures = bankedGrades.filter((grade) => grade.elite).length;
   const omenLore = (state.omen?.lorePerCapture ?? 0) * captures;
   const dupeLore = dupesFused * DUPE_CONVERT_LORE;
   const eliteLore = eliteCaptures * ELITE_LORE;
-  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore;
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore + boldLore;
   return {
     ...state,
     expeditionComplete: true,
@@ -601,10 +614,16 @@ export function attemptCapture(state) {
   const fast = enc.turn <= FAST_CAPTURE_TURNS;
   const flourish = clean && fast ? ' — a clean, swift bind.' : clean ? ' — cleanly bound.' : fast ? ' — a swift bind.' : '.';
 
+  const def = beastDef(target);
+  let route = null;
+  if (target.altBind) {
+    route = enc.flags.attunementMatch && target.posture === def.bindPosture ? 'bold' : 'patient';
+  }
+
   return finalizeEncounterAction(
     {
       ...state,
-      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast, elite: target.elite === true, pressLevel: enc.pressLevel ?? 0 }],
+      captureLog: [...(state.captureLog ?? []), { id: target.id, clean, fast, elite: target.elite === true, pressLevel: enc.pressLevel ?? 0, route }],
       party: {
         ...state.party,
         captures: [...state.party.captures, target.id],

@@ -296,8 +296,8 @@ test('capturing an elite quarry earns bonus Lore', () => {
   s = extractExpedition(s);
 
   assert.equal(s.result.eliteCaptures, 1);
-  // base 1*3 + depth 4 + clean/fast 3 + elite 4 = 14
-  assert.equal(s.result.loreEarned, 14);
+  // base 1*3 + depth 4 + clean/fast 3 + elite 4 + bold 2 = 16 (iron+shove = bold route)
+  assert.equal(s.result.loreEarned, 16);
 });
 
 // G3a — a field cap makes composition a real trade-off: with a full roster you
@@ -1178,4 +1178,32 @@ test('agitation from the bold route adds per-turn pressure', () => {
   const pressureAfterPatient = c.currentEncounter.pressure;
 
   assert.ok(pressureAfterBold > pressureAfterPatient, 'agitation makes the bold line press harder');
+});
+
+test('a bold-route elite capture banks bonus Lore and a bond', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bold -> bindable
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  // bond: clean-capture pre-bond (+1, cme.3) + bold-route bond (+1) = 2
+  assert.equal(s.bonds['chain-maw'], 2, 'bold catch deepens the bond beyond the clean pre-bond');
+  // base 1*3 + depth 4 = 7; elite +4; clean/fast +3; bold +2 => 16 (no dupe; chain-maw is new)
+  assert.equal(s.result.loreEarned, 16);
+});
+
+test('a patient-route elite capture is plain (no bold bonus)', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'], lore: 0 });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  s = applyHeroProbe(s, 'storm');
+  s = applyToolAction(s, 'bait-stake'); // patient -> bindable
+  s = attemptCapture(s);
+  s = extractExpedition(s);
+
+  // bond: only the clean-capture pre-bond (+1, cme.3) — NO bold-route bond
+  assert.equal(s.bonds['chain-maw'], 1, 'patient catch grants only the clean pre-bond, not the bold bond');
+  // base 1*3 + depth 4 = 7; elite +4; clean +2 (no wrong reads); fast +1 (bind on turn 3) => 14
+  assert.equal(s.result.loreEarned, 14);
 });
