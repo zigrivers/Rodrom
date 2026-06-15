@@ -1207,3 +1207,23 @@ test('a patient-route elite capture is plain (no bold bonus)', () => {
   // base 1*3 + depth 4 = 7; elite +4; clean +2 (no wrong reads); fast +1 (bind on turn 3) => 14
   assert.equal(s.result.loreEarned, 14);
 });
+
+test('a truly-wrong read (neither route) still escapes a dual-path elite', () => {
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('chain-maw', 4) } };
+  // Dire Chain Maw answers to iron (bold) or storm (patient); veil is neither.
+  s = applyHeroProbe(s, 'veil');
+  s = applyHeroProbe(s, 'veil');
+  s = applyHeroProbe(s, 'veil');
+  assert.equal(s.currentEncounter.target.captureState, 'escaped', 'wrong reads still escape on a Dire beast');
+});
+
+test('a Dire Veil Lynx stays single-path and captures via its reveal route', () => {
+  let s = createInitialState({ encounterIds: ['veil-lynx'] }); // default party fields grave-hound + mireback
+  s = { ...s, currentEncounter: { ...s.currentEncounter, depth: 4, target: createTargetState('veil-lynx', 4) } };
+  assert.equal(s.currentEncounter.target.altBind, null, 'concealed elite has no alt route');
+
+  s = applyCompanionAction(s, 'grave-hound', 'scent-read'); // reveal -> posture revealed + attunement hint
+  s = applyHeroProbe(s, 'veil');                            // lock in the revealed attunement
+  assert.equal(s.currentEncounter.target.captureState, 'bindable', 'single-path concealed capture still works');
+});
