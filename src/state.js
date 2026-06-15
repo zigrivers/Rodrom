@@ -95,23 +95,38 @@ function buildPartyBeasts(fielded) {
   return Object.fromEntries(fielded.map(buildBeast).filter(Boolean));
 }
 
-// Veilsight passive (cme.2): a fielded Veil Lynx ally reveals the target's
-// attunement on arrival (even concealed ones) as a codex hint. Does not
+// Veilsight passive (cme.2): a fielded Veil Lynx ally reveals the current
+// target's attunement on arrival (even concealed ones) as a codex hint. At a
+// deep bond (>= 3) it also reveals the NEXT layer's attunement (G2). Does not
 // auto-probe — you still lock it in with a probe.
+function revealAttunement(codexHints, beastId) {
+  const attunement = TARGET_BEASTS[beastId]?.primaryAttunement;
+  if (!attunement) {
+    return codexHints;
+  }
+  const current = codexHints[beastId] ?? [];
+  if (current.includes(attunement)) {
+    return codexHints;
+  }
+  return { ...codexHints, [beastId]: [...current, attunement] };
+}
+
 export function seedEncounterKnowledge(state) {
-  const hasVeilsight = state.fielded.some((id) => CAPTURED_ALLY[id]?.passive === 'veilsight');
-  if (!hasVeilsight) {
+  const veilAlly = state.fielded.find((id) => CAPTURED_ALLY[id]?.passive === 'veilsight');
+  if (!veilAlly) {
     return state;
   }
-  const target = state.currentEncounter.target;
-  const current = state.codexHints[target.id] ?? [];
-  if (current.includes(target.primaryAttunement)) {
-    return state;
+  const bond = state.bonds?.[veilAlly] ?? 0;
+
+  let codexHints = revealAttunement(state.codexHints, state.currentEncounter.target.id);
+  if (bond >= 3) {
+    const ids = state.encounterIds ?? [];
+    if (ids.length) {
+      const nextId = ids[(state.encounterIndex + 1) % ids.length];
+      codexHints = revealAttunement(codexHints, nextId);
+    }
   }
-  return {
-    ...state,
-    codexHints: { ...state.codexHints, [target.id]: [...current, target.primaryAttunement] },
-  };
+  return { ...state, codexHints };
 }
 
 export function createInitialState(options = {}) {

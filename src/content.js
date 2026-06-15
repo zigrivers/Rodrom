@@ -43,21 +43,21 @@ export const CAPTURED_ALLY = {
     label: 'Slam',
     passive: 'iron-hold',
     passiveName: 'Iron Hold',
-    passiveDesc: 'capture windows do not decay',
+    passiveDesc: 'capture windows do not decay; at a deep bond (3+) the quarry also cannot flee',
   },
   'veil-lynx': {
     action: 'sense',
     label: 'Sense',
     passive: 'veilsight',
     passiveName: 'Veilsight',
-    passiveDesc: 'reveals each target attunement on arrival, even concealed ones',
+    passiveDesc: 'reveals each target attunement on arrival, even concealed ones; at a deep bond (3+) reveals the next layer too',
   },
   'storm-antler': {
     action: 'ground',
     label: 'Ground',
     passive: 'grounding-aura',
     passiveName: 'Grounding Aura',
-    passiveDesc: 'the quarry presses less each turn',
+    passiveDesc: 'the quarry presses less each turn (relief scales with bond)',
   },
 };
 

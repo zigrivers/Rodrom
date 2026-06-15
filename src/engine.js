@@ -239,7 +239,9 @@ function resolveEncounterPressure(state) {
         : 'Mireback Brace absorbs the counter-pressure.'
     );
   } else {
-    const grounding = 'grounding-aura' in activePassives(state) ? 1 : 0;
+    // Grounding Aura (cme.2) scales its relief with bond depth (G2).
+    const groundingBond = activePassives(state)['grounding-aura'];
+    const grounding = groundingBond === undefined ? 0 : 1 + Math.floor(groundingBond / 2);
     const newPressure = enc.pressure + Math.max(0, pressurePerTurn(enc.depth) - grounding);
     next = { ...next, currentEncounter: { ...next.currentEncounter, pressure: newPressure } };
 
@@ -325,7 +327,9 @@ export function applyHeroProbe(state, attunement) {
   const passives = activePassives(state);
   const escapeTolerance = ESCAPE_READS + ('skittish-kin' in passives ? 1 + passives['skittish-kin'] : 0);
   const escapeProgress = matched ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
-  const escaped = !matched && escapeProgress >= escapeTolerance && !enc.flags.snared;
+  // A deeply-bonded Iron Hold ally (G2) also pins the quarry so it cannot flee.
+  const ironGrip = passives['iron-hold'] !== undefined && passives['iron-hold'] >= 3;
+  const escaped = !matched && escapeProgress >= escapeTolerance && !enc.flags.snared && !ironGrip;
 
   const updatedTarget = { ...target };
   updatedTarget.captureState = escaped ? 'escaped' : deriveCaptureState(updatedTarget, flags);
