@@ -128,7 +128,7 @@ function completeExpedition(state, rank) {
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, forfeited },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, boldLore, forfeited },
     roster,
     bonds,
     lore: (state.lore ?? 0) + loreEarned,
@@ -263,6 +263,8 @@ function deriveCaptureState(target, flags) {
 }
 
 function consumeDefenseFlags(flags) {
+  // Note: `agitated` (bold-route, adaptive-read) is a standing condition for the
+  // rest of the encounter — intentionally NOT consumed here, unlike guard/brace.
   return {
     ...flags,
     guardRaised: false,
