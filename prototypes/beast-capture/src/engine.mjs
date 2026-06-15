@@ -682,6 +682,7 @@ export function advanceEncounter(state) {
       riskLevel: carryoverPressure,
       escapeProgress: 0,
       windowDecay: 0,
+      pressLevel: 0,
       structures: [],
       flags: {
         attunementMatch: false,

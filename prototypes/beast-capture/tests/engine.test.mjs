@@ -975,6 +975,11 @@ test('descending into a deeper layer starts it already under pressure', () => {
   assert.ok(s.currentEncounter.pressure > 0);
 });
 
+test('every encounter starts at press level 0', () => {
+  const fresh = createInitialState({ encounterIds: ['chain-maw'] });
+  assert.equal(fresh.currentEncounter.pressLevel, 0);
+});
+
 test('secureHaul locks in the haul without healing', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
   s = applyHeroProbe(s, 'ash');
