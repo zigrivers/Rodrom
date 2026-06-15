@@ -1079,3 +1079,16 @@ test('Iron Hold lets you press without the window slipping', () => {
   assert.equal(s.currentEncounter.target.captureState, 'bindable', 'still bindable');
   assert.equal(s.currentEncounter.pressLevel, 3, 'pressed three times safely');
 });
+
+test('pressing while pressure is high can frenzy and wound the leader', () => {
+  // staked snare keeps the window open so we can press into a frenzy without slipping
+  let s = createInitialState({ encounterIds: ['chain-maw'] });
+  s = applyToolAction(s, 'snare-line'); // window will not decay
+  s = applyHeroProbe(s, 'iron');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove'); // bindable
+  const hp0 = s.party.leader.health;
+  for (let i = 0; i < 8 && s.party.leader.health === hp0; i += 1) {
+    s = pressCapture(s);
+  }
+  assert.ok(s.party.leader.health < hp0, 'a frenzy during a long press wounded the leader');
+});
