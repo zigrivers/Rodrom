@@ -9,6 +9,7 @@ import {
   applyToolAction,
   attemptCapture,
   extractExpedition,
+  secureHaul,
 } from '../src/engine.mjs';
 import { renderApp } from '../src/ui.mjs';
 
@@ -234,15 +235,28 @@ test('the expedition view shows how much of the haul is still at risk (G1)', () 
   assert.match(renderApp(s), /at risk/i);
 });
 
-test('an Anchor option appears once a layer is resolved', () => {
+test('Recover and Secure anchor options appear once a layer is resolved', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
-  assert.doesNotMatch(renderApp(s), /data-action="anchor"(?![^>]*disabled)/);
+  assert.doesNotMatch(renderApp(s), /data-action="anchor-recover"(?![^>]*disabled)/);
 
   s = applyHeroProbe(s, 'ash');
   s = applyCompanionAction(s, 'grave-hound', 'harry');
   s = attemptCapture(s);
 
-  assert.match(renderApp(s), /data-action="anchor"(?![^>]*disabled)/);
+  const html = renderApp(s);
+  assert.match(html, /data-action="anchor-recover"(?![^>]*disabled)/);
+  assert.match(html, /data-action="anchor-secure"(?![^>]*disabled)/);
+});
+
+test('Secure is disabled when there is nothing new to secure', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = secureHaul(s); // securedCount == captures, anchored == true
+  s = { ...s, currentEncounter: { ...s.currentEncounter, anchored: false } }; // re-open the gate for the test
+
+  assert.match(renderApp(s), /data-action="anchor-secure"[^>]*disabled/);
 });
 
 test('an Extract option appears once a layer is resolved', () => {

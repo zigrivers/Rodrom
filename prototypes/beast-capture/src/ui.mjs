@@ -140,7 +140,8 @@ export function renderApp(state) {
           </div>
           <div class="action-group">
             <h4>Between layers</h4>
-            <button data-action="anchor" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored)}>Anchor (recover)</button>
+            <button data-action="anchor-recover" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored)}>Anchor: Recover (heal)</button>
+            <button data-action="anchor-secure" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored || (state.securedCount ?? 0) >= state.party.captures.length)}>Anchor: Secure (bank haul)</button>
             <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Descend deeper</button>
             <button data-action="extract" ${renderDisabled(!advanceAllowed)}>Extract (keep haul)</button>
           </div>
