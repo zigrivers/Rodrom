@@ -600,6 +600,33 @@ export function secureHaul(state) {
   );
 }
 
+// Anchor — Recover (greed): heal the leader and shed beast fatigue WITHOUT
+// securing the haul. Consumes the layer's single anchor; recovery thins with depth.
+export function recoverAtLayer(state) {
+  if (state.expeditionComplete || !canAdvanceEncounter(state) || state.currentEncounter.anchored) {
+    return state;
+  }
+  const heal = anchorHeal(state.currentEncounter.depth);
+  const leader = {
+    ...state.party.leader,
+    health: Math.min(state.party.leader.maxHealth, state.party.leader.health + heal),
+  };
+  const beasts = Object.fromEntries(
+    Object.entries(state.party.beasts).map(([id, beast]) => [
+      id,
+      { ...beast, fatigue: Math.max(0, beast.fatigue - 2) },
+    ])
+  );
+  return appendLog(
+    {
+      ...state,
+      party: { ...state.party, leader, beasts },
+      currentEncounter: { ...state.currentEncounter, anchored: true },
+    },
+    `The expedition makes camp at layer ${state.currentEncounter.depth}: it heals and steadies (recovery thins deeper down).`
+  );
+}
+
 // Anchors (E3): a recovery checkpoint between layers. Once a layer is resolved,
 // the expedition can anchor to heal the leader and shed beast fatigue before
 // deciding to descend or extract. Available once per layer.

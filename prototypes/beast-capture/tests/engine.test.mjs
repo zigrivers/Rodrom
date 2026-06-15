@@ -23,6 +23,7 @@ import {
   canAdvanceEncounter,
   extractExpedition,
   pressurePerTurn,
+  recoverAtLayer,
   secureHaul,
   startingPressure,
   withdrawEncounter,
@@ -984,5 +985,20 @@ test('secureHaul locks in the haul without healing', () => {
 
   assert.equal(s.securedCount, 1, 'haul secured');
   assert.equal(s.party.leader.health, before, 'no healing');
+  assert.equal(s.currentEncounter.anchored, true, 'consumes the layer anchor');
+});
+
+test('recoverAtLayer heals and sheds fatigue without securing', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth', 'chain-maw'] });
+  s = applyHeroProbe(s, 'ash');
+  s = applyCompanionAction(s, 'grave-hound', 'harry');
+  s = attemptCapture(s);
+  s = { ...s, party: { ...s.party, leader: { ...s.party.leader, health: 2 } } };
+
+  s = recoverAtLayer(s);
+
+  assert.equal(s.party.leader.health, 2 + anchorHeal(1), 'leader healed');
+  assert.equal(s.party.beasts['grave-hound'].fatigue, 0, 'fatigue shed (was 1, -2 floored at 0)');
+  assert.equal(s.securedCount, 0, 'haul NOT secured');
   assert.equal(s.currentEncounter.anchored, true, 'consumes the layer anchor');
 });
