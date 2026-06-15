@@ -21,6 +21,7 @@ const BONDS_KEY = 'spiral-descent-bonds';
 const LORE_KEY = 'spiral-descent-lore';
 const UPGRADES_KEY = 'spiral-descent-upgrades';
 const COACH_KEY = 'spiral-descent-coach';
+const BESTIARY_KEY = 'spiral-descent-bestiary';
 
 function loadJSON(key, fallback) {
   try {
@@ -37,6 +38,7 @@ function saveCampaign(s) {
     localStorage.setItem(LORE_KEY, JSON.stringify(s.lore ?? 0));
     localStorage.setItem(UPGRADES_KEY, JSON.stringify(s.upgrades ?? {}));
     localStorage.setItem(COACH_KEY, JSON.stringify(s.coach ?? true));
+    localStorage.setItem(BESTIARY_KEY, JSON.stringify(s.bestiary ?? {}));
   } catch {
     // ignore storage errors (private mode, quota, etc.)
   }
@@ -48,6 +50,7 @@ const campaign = {
   lore: loadJSON(LORE_KEY, 0),
   upgrades: loadJSON(UPGRADES_KEY, {}),
   coach: loadJSON(COACH_KEY, true),
+  bestiary: loadJSON(BESTIARY_KEY, {}),
 };
 
 let state = createInitialState({ started: false, ...campaign });
@@ -68,6 +71,7 @@ function startExpedition() {
     upgrades: state.upgrades,
     fielded: state.fielded,
     coach: state.coach,
+    bestiary: state.bestiary,
   });
 }
 
@@ -155,6 +159,7 @@ document.addEventListener('click', (event) => {
         upgrades: state.upgrades,
         fielded: state.fielded,
         coach: state.coach,
+        bestiary: state.bestiary,
       });
       break;
     case 'toggle-coach':
@@ -169,7 +174,7 @@ document.addEventListener('click', (event) => {
         state = applyCompanionAction(state, beastId, actionId);
       } else if (button.dataset.action.startsWith('toggle-')) {
         const beastId = button.dataset.action.slice('toggle-'.length);
-        const fielded = toggleFielded(state.fielded, beastId, fieldCap(state.upgrades));
+        const fielded = toggleFielded(state.fielded, beastId, fieldCap(state.upgrades, state.bestiary));
         state = createInitialState({
           started: false,
           roster: state.roster,
@@ -178,6 +183,7 @@ document.addEventListener('click', (event) => {
           upgrades: state.upgrades,
           fielded,
           coach: state.coach,
+          bestiary: state.bestiary,
         });
       }
       break;

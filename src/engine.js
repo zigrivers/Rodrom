@@ -1,4 +1,4 @@
-import { createTargetState, seedEncounterKnowledge } from './state.js';
+import { createTargetState, seedEncounterKnowledge, speciesComplete } from './state.js';
 import { TARGET_BEASTS, COMPANION_ACTION_KIND, TOOL_ACTION_KIND, CAPTURED_ALLY } from './content.js';
 
 // Consequence tuning (F4/F7/F11). Kept as named constants for easy balancing.
@@ -24,6 +24,12 @@ const PRESS_LORE = 2;
 // A "bold" capture of a dual-path elite (adaptive-read) — the daring, agitating
 // route — is worth this much bonus Lore and deepens that species' bond.
 const BOLD_CAPTURE_LORE = 2;
+
+// Bestiary bounties (collection goal): one-time Lore the first time each tier is
+// earned. Kept one-time so the collection goal doesn't inflate the run economy.
+const BESTIARY_BRONZE_LORE = 5;
+const BESTIARY_SILVER_LORE = 10;
+const BESTIARY_GOLD_LORE = 20;
 
 // Deeper layers press harder: per-turn pressure rises with descent depth, so
 // frenzy and failure scale with depth (run structure, t9i.3).
@@ -118,19 +124,38 @@ function completeExpedition(state, rank) {
       bonds[id] = (bonds[id] ?? 0) + 1;
     }
   }
+  // Bestiary (collection goal): record tier milestones from banked captures and
+  // pay a one-time Lore bounty for each tier newly earned this run.
+  const bestiary = { ...(state.bestiary ?? {}) };
+  let bestiaryBounty = 0;
+  for (let i = 0; i < bankedCaptures.length; i += 1) {
+    const id = bankedCaptures[i];
+    const grade = bankedGrades[i];
+    const before = bestiary[id] ?? { bronze: false, silver: false, gold: false };
+    const after = {
+      bronze: true, // any banked capture earns Bronze
+      silver: before.silver || grade.clean === true,
+      gold: before.gold || grade.elite === true,
+    };
+    if (!before.bronze && after.bronze) bestiaryBounty += BESTIARY_BRONZE_LORE;
+    if (!before.silver && after.silver) bestiaryBounty += BESTIARY_SILVER_LORE;
+    if (!before.gold && after.gold) bestiaryBounty += BESTIARY_GOLD_LORE;
+    bestiary[id] = after;
+  }
   const captures = bankedCaptures.length;
   const cleanCaptures = bankedGrades.filter((grade) => grade.clean).length;
   const eliteCaptures = bankedGrades.filter((grade) => grade.elite).length;
   const omenLore = (state.omen?.lorePerCapture ?? 0) * captures;
   const dupeLore = dupesFused * DUPE_CONVERT_LORE;
   const eliteLore = eliteCaptures * ELITE_LORE;
-  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore + boldLore;
+  const loreEarned = captures * 3 + state.currentEncounter.depth + bonusLore + omenLore + dupeLore + eliteLore + pressLore + boldLore + bestiaryBounty;
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, boldLore, forfeited },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, boldLore, bestiaryBounty, forfeited },
     roster,
     bonds,
+    bestiary,
     lore: (state.lore ?? 0) + loreEarned,
   };
 }
@@ -159,7 +184,9 @@ function activePassives(state) {
   for (const id of Object.keys(state.party.beasts)) {
     const passive = CAPTURED_ALLY[id]?.passive;
     if (passive) {
-      map[passive] = state.bonds?.[id] ?? 0;
+      // A bestiary-complete species counts as +1 effective bond (collection-goal perk).
+      const perk = speciesComplete(state.bestiary, id) ? 1 : 0;
+      map[passive] = (state.bonds?.[id] ?? 0) + perk;
     }
   }
   return map;
