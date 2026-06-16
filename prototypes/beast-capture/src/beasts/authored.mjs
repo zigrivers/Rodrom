@@ -47,7 +47,7 @@ export const AUTHORED = [
   { id: 'stormcoil-apostate', name: 'Stormcoil Apostate', genus: 'Drakes', rank: 'quarry', stratum: 'stormspire',
     primaryAttunement: 'storm', secondaryAttunement: 'iron', initialPosture: 'charging', bindKind: 'corner', bindPosture: 'cornered',
     behaviorArchetype: 'rusher', initialCaptureState: 'unreadable', maxHealth: 4,
-    blurb: 'Its storm-tell is a feint; the iron core is the true read. Answer both to bind it.',
+    blurb: 'Storm crackles at the surface; an iron core anchors beneath. Read both courts to bind it.',
     expand: { dire: true } },
 
   { id: 'cinder-veilkeeper', name: 'Cinder Veilkeeper', genus: 'Stalkers', rank: 'quarry', stratum: 'veilmarsh',
