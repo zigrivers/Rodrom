@@ -289,7 +289,7 @@ function deriveCaptureState(target, flags) {
   if (boldReady || patientReady) {
     return 'bindable';
   }
-  const anyAttunement = flags.attunementMatch || flags.altAttunementMatch;
+  const anyAttunement = flags.attunementMatch || flags.secondaryAttunementMatch || flags.altAttunementMatch;
   const anyPosture =
     target.posture === def.bindPosture || (target.altBind && target.posture === target.altBind.bindPosture);
   if (anyAttunement || anyPosture) {
