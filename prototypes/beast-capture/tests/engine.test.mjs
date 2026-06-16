@@ -93,15 +93,15 @@ test('correct attunement alone is not enough without the bind posture', () => {
 test('veil lynx conceals its attunement until scent-read reveals it', () => {
   let s = createInitialState({ encounterIds: ['veil-lynx'] });
 
-  // Probing the true attunement while hidden is misleading and makes no progress
+  // Probing the Absence court while concealed stirs the beast faintly but does not register a read
   s = applyHeroProbe(s, 'veil');
-  assert.match(s.log.at(-2), /rejects/i);
+  assert.match(s.log.at(-2), /faintly/i);
   assert.notEqual(s.currentEncounter.target.captureState, 'bindable');
 
-  // The false lead reads as a (misleading) reaction but never matches
+  // The false lead's court stirs faintly (misleading deception) but never registers a match
   let f = createInitialState({ encounterIds: ['veil-lynx'] });
   f = applyHeroProbe(f, 'silence');
-  assert.match(f.log.at(-2), /reacts/i);
+  assert.match(f.log.at(-2), /faintly/i);
   assert.notEqual(f.currentEncounter.target.captureState, 'bindable');
 
   // Scent Read reveals the true attunement and exposes the lynx
@@ -284,15 +284,15 @@ test('Iron Hold: a fielded Chain Maw ally keeps the capture window from decaying
 
 test('Skittish Kin: a fielded Ashwing ally raises the escape tolerance', () => {
   let without = createInitialState({ encounterIds: ['chain-maw'] });
-  without = applyHeroProbe(without, 'stone');
-  without = applyHeroProbe(without, 'stone');
-  without = applyHeroProbe(without, 'stone');
+  without = applyHeroProbe(without, 'veil'); // foreign court (Absence) — wrong read for chain-maw (Mass)
+  without = applyHeroProbe(without, 'veil');
+  without = applyHeroProbe(without, 'veil');
   assert.equal(without.currentEncounter.target.captureState, 'escaped');
 
   let withKin = createInitialState({ roster: ['ashwing-moth'], fielded: ['ashwing-moth'], encounterIds: ['chain-maw'] });
-  withKin = applyHeroProbe(withKin, 'stone');
-  withKin = applyHeroProbe(withKin, 'stone');
-  withKin = applyHeroProbe(withKin, 'stone');
+  withKin = applyHeroProbe(withKin, 'veil');
+  withKin = applyHeroProbe(withKin, 'veil');
+  withKin = applyHeroProbe(withKin, 'veil');
   assert.notEqual(withKin.currentEncounter.target.captureState, 'escaped');
 });
 
@@ -527,7 +527,7 @@ test('captured encounters preserve learned clues into the expedition result summ
   state = attemptCapture(state);
   state = extractExpedition(state);
 
-  assert.deepEqual(state.codexHints['ashwing-moth'], ['ash']);
+  assert.deepEqual(state.codexHints['ashwing-moth'], ['Heat']); // probe now records court label
   assert.equal(state.result.rank, 'success');
 });
 
@@ -535,9 +535,9 @@ test('three wrong reads let the beast escape and cost supplies', () => {
   let s = createInitialState({ encounterIds: ['chain-maw'] });
   const startTools = s.party.tools['snare-line'] + s.party.tools['bait-stake'];
 
-  s = applyHeroProbe(s, 'stone');
-  s = applyHeroProbe(s, 'stone');
-  s = applyHeroProbe(s, 'stone');
+  s = applyHeroProbe(s, 'veil'); // Absence court — foreign to chain-maw (Mass)
+  s = applyHeroProbe(s, 'veil');
+  s = applyHeroProbe(s, 'veil');
 
   assert.equal(s.currentEncounter.target.captureState, 'escaped');
   assert.equal(canAdvanceEncounter(s), true);
@@ -849,10 +849,10 @@ test('probing while bindable does not collapse the capture window', () => {
 
 test('only confirmed probes are recorded as codex hints', () => {
   let state = createInitialState({ encounterIds: ['chain-maw'] });
-  state = applyHeroProbe(state, 'stone');
-  state = applyHeroProbe(state, 'iron');
+  state = applyHeroProbe(state, 'veil'); // foreign court (Absence) — no match for chain-maw (Mass)
+  state = applyHeroProbe(state, 'iron'); // correct — records the court label
 
-  assert.deepEqual(state.codexHints['chain-maw'], ['iron']);
+  assert.deepEqual(state.codexHints['chain-maw'], ['Mass']); // probe records court label, not attunement
 });
 
 // cme.3 — capture scoring: clean (no wrong reads) and fast (quick bind) captures
@@ -1177,7 +1177,7 @@ test('probing the alt attunement on a Dire beast reads as a valid alt match', ()
 
   assert.equal(s.currentEncounter.flags.altAttunementMatch, true, 'alt read registered');
   assert.equal(s.currentEncounter.escapeProgress ?? 0, 0, 'a valid alt read is not a wrong read');
-  assert.ok((s.codexHints['chain-maw'] ?? []).includes('storm'), 'alt read recorded as a clue');
+  assert.ok((s.codexHints['chain-maw'] ?? []).includes('Sky'), 'alt read recorded as court label clue');
 });
 
 test('probing that same attunement on a NON-elite beast is still a wrong read', () => {

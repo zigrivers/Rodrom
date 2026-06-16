@@ -223,7 +223,7 @@ test('learned clues from earlier encounters stay visible during play', () => {
 
   const html = renderApp(s);
   assert.match(html, /Codex/);
-  assert.match(html, /Ashwing Moth: Ash/i);
+  assert.match(html, /Ashwing Moth: Heat/i); // probe now records court label
 });
 
 test('the expedition view shows how much of the haul is still at risk (G1)', () => {
@@ -308,7 +308,7 @@ test('the encounter view conveys state through cues, not literal meters', () => 
 
 test('the encounter view warns when bad reads are spooking the quarry', () => {
   let s = createInitialState({ encounterIds: ['chain-maw'] });
-  s = applyHeroProbe(s, 'stone'); // wrong read raises escape risk
+  s = applyHeroProbe(s, 'veil'); // Absence court — foreign to chain-maw (Mass); wrong read raises escape risk
 
   assert.match(renderApp(s), /spooking it/i);
 });
