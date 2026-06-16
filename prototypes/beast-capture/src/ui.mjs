@@ -1,6 +1,7 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
 import { canAdvanceEncounter, tensionLabel } from './engine.mjs';
 import { upgradeCost, UPGRADES, fieldCap, bestiaryComplete } from './state.mjs';
+import { COURT_OF, COURT_LABEL } from './courts.mjs';
 
 export function renderApp(state) {
   if (!state.started) {
@@ -85,10 +86,10 @@ export function renderApp(state) {
         <div class="actions">
           <div class="action-group">
             <h4>Reads</h4>
-            <button data-action="probe-ash" ${renderDisabled(encounterResolved)}>Probe Ash</button>
-            <button data-action="probe-iron" ${renderDisabled(encounterResolved)}>Probe Iron</button>
-            <button data-action="probe-storm" ${renderDisabled(encounterResolved)}>Probe Storm</button>
-            <button data-action="probe-veil" ${renderDisabled(encounterResolved)}>Probe Veil</button>
+            <button data-action="probe-heat" ${renderDisabled(encounterResolved)}>Probe Heat</button>
+            <button data-action="probe-mass" ${renderDisabled(encounterResolved)}>Probe Mass</button>
+            <button data-action="probe-sky" ${renderDisabled(encounterResolved)}>Probe Sky</button>
+            <button data-action="probe-absence" ${renderDisabled(encounterResolved)}>Probe Absence</button>
           </div>
           <div class="action-group">
             <h4>Force &amp; Defense</h4>
@@ -326,6 +327,10 @@ function triggerHint(def) {
   }
 }
 
+function courtLabelFor(attunement) {
+  return COURT_LABEL[COURT_OF[attunement]] ?? attunement;
+}
+
 // Oblique tracker mode (cme.3): reflect only what's been learned, never the
 // prescribed next action, so reading the quarry stays a real skill.
 function obliqueGuidance(state, target) {
@@ -336,10 +341,10 @@ function obliqueGuidance(state, target) {
     return 'A Dire quarry — it answers two ways. Find them.';
   }
   const learned = state.codexHints[target.id] ?? [];
-  if (learned.includes(target.primaryAttunement)) {
-    return `You've learned it answers to ${formatLabel(target.primaryAttunement)}. Drive it from there.`;
+  if (learned.length) {
+    return `You've felt which court answers. Drive it from there.`;
   }
-  return 'Read the quarry yourself — watch what it reacts to and how it holds itself.';
+  return 'Read the quarry yourself — watch which court it answers to, sharply or faintly.';
 }
 
 function captureGuidance(state) {
@@ -362,13 +367,15 @@ function captureGuidance(state) {
   if (def.concealed && target.posture !== def.bindPosture) {
     return `${target.name} masks its true nature. Use Grave Hound: Scent Read to reveal it.`;
   }
-  if (!enc.flags.attunementMatch) {
-    const revealed = (state.codexHints[target.id] ?? []).includes(target.primaryAttunement);
-    if (revealed) {
-      return `It responds to ${target.primaryAttunement} — probe ${formatLabel(target.primaryAttunement)} to lock it in.`;
-    }
-    return `Learn what ${target.name} responds to — probe attunements or use Grave Hound: Scent Read.`;
+  if (!enc.flags.attunementMatch || (target.secondaryAttunement && !enc.flags.secondaryAttunementMatch)) {
+    const courts = [courtLabelFor(target.primaryAttunement)];
+    if (target.secondaryAttunement) courts.push(courtLabelFor(target.secondaryAttunement));
+    return `Read its ${courts.length > 1 ? 'courts' : 'court'} — probe ${courts.join(' and ')}${
+      target.secondaryAttunement
+        ? ' (it answers two ways — read both). A sharp reaction is the lead; a faint one is its twin.'
+        : '.'
+    }`;
   }
-  return `It responds to ${target.primaryAttunement}. Now ${triggerHint(def)} to make it ${def.bindPosture}.`;
+  return `Read in. Now ${triggerHint(def)} to make it ${def.bindPosture}.`;
 }
 

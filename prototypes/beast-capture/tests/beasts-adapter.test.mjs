@@ -29,3 +29,19 @@ test('toTargetBeast round-trips each shipped beast to its exact TARGET_BEASTS en
     assert.deepEqual(projected, TARGET_BEASTS[raw.id], `mismatch for ${raw.id}`);
   }
 });
+
+test('toTargetBeast carries secondaryAttunement only when present', () => {
+  const single = toTargetBeast(normalizeBeast({
+    id: 's', name: 'S', genus: 'Drakes', primaryAttunement: 'ash',
+    bindKind: 'corner', bindPosture: 'cornered', initialPosture: 'skittish',
+    initialCaptureState: 'unreadable', maxHealth: 3, stratum: 'ashfields',
+  }));
+  assert.equal('secondaryAttunement' in single, false, 'omitted when null');
+
+  const dual = toTargetBeast(normalizeBeast({
+    id: 'd', name: 'D', genus: 'Drakes', primaryAttunement: 'storm', secondaryAttunement: 'iron',
+    bindKind: 'corner', bindPosture: 'cornered', initialPosture: 'charging',
+    initialCaptureState: 'unreadable', maxHealth: 4, stratum: 'stormspire',
+  }));
+  assert.equal(dual.secondaryAttunement, 'iron');
+});

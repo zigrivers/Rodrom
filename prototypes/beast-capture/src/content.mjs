@@ -1,3 +1,19 @@
+import { AUTHORED } from './beasts/authored.mjs';
+import { expandRoster } from './beasts/generate.mjs';
+import { toTargetBeast } from './beasts/adapter.mjs';
+import { COURT_OF } from './courts.mjs';
+
+const ROSTER = expandRoster(AUTHORED).map(toTargetBeast);
+
+// Engine-facing beast definitions, keyed by id (includes catalogued variants).
+export const TARGET_BEASTS = Object.fromEntries(ROSTER.map((b) => [b.id, b]));
+
+// Species the encounter system may spawn: authored base species whose attunements are all in the
+// 8 core courts (deep-attunement beasts are catalogued but not yet spawnable; variants surface via
+// the depth/elite mechanic, not the pool).
+const coreOnly = (b) => [b.primaryAttunement, b.secondaryAttunement].every((a) => a == null || COURT_OF[a]);
+export const CAPTURABLE_POOL = AUTHORED.filter(coreOnly).map((b) => b.id);
+
 export const PLAYER_BEASTS = {
   'grave-hound': {
     id: 'grave-hound',
@@ -58,65 +74,6 @@ export const CAPTURED_ALLY = {
     passive: 'grounding-aura',
     passiveName: 'Grounding Aura',
     passiveDesc: 'the quarry presses less each turn (relief scales with bond)',
-  },
-};
-
-// Each target's capture condition is posture-driven: the player must probe the
-// correct attunement AND drive the beast into its `bindPosture` using the
-// beast-specific `postureTrigger` action. `concealed` beasts read deceptively
-// (the falseLead looks like a hit) until the trigger reveals them.
-export const TARGET_BEASTS = {
-  'ashwing-moth': {
-    id: 'ashwing-moth',
-    name: 'Ashwing Moth',
-    primaryAttunement: 'ash',
-    falseLead: 'flame',
-    initialPosture: 'skittish',
-    bindPosture: 'cornered',
-    bindKind: 'corner',
-    altBind: { attunement: 'iron', bindKind: 'stagger', bindPosture: 'staggered' },
-    initialCaptureState: 'unreadable',
-    maxHealth: 2,
-    blurb: 'A moth of cinders; its wings scatter blinding ash.',
-  },
-  'chain-maw': {
-    id: 'chain-maw',
-    name: 'Chain Maw',
-    primaryAttunement: 'iron',
-    falseLead: 'stone',
-    initialPosture: 'charging',
-    bindPosture: 'staggered',
-    bindKind: 'stagger',
-    altBind: { attunement: 'storm', bindKind: 'ground', bindPosture: 'grounded' },
-    initialCaptureState: 'unreadable',
-    maxHealth: 4,
-    blurb: 'Iron-jawed and relentless — it drags its own broken chains.',
-  },
-  'veil-lynx': {
-    id: 'veil-lynx',
-    name: 'Veil Lynx',
-    primaryAttunement: 'veil',
-    falseLead: 'silence',
-    initialPosture: 'hidden',
-    bindPosture: 'revealed',
-    bindKind: 'reveal',
-    concealed: true,
-    initialCaptureState: 'unreadable',
-    maxHealth: 3,
-    blurb: 'Half-seen at the edge of torchlight; gone when looked at.',
-  },
-  'storm-antler': {
-    id: 'storm-antler',
-    name: 'Storm Antler',
-    primaryAttunement: 'storm',
-    falseLead: 'light',
-    initialPosture: 'braced',
-    bindPosture: 'grounded',
-    bindKind: 'ground',
-    altBind: { attunement: 'iron', bindKind: 'stagger', bindPosture: 'staggered' },
-    initialCaptureState: 'unreadable',
-    maxHealth: 5,
-    blurb: 'Its antlers hum before the strike; the air tastes of lightning.',
   },
 };
 

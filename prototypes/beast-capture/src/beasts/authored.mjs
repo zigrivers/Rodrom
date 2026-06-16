@@ -43,4 +43,22 @@ export const AUTHORED = [
     behaviorArchetype: 'spawner', onKillHazard: 'spawn', initialCaptureState: 'unreadable', maxHealth: 4,
     blurb: 'Six orbiting Sporelings each add a false feint; bind the anchor to collapse them.',
     expand: { dire: true } },
+
+  { id: 'stormcoil-apostate', name: 'Stormcoil Apostate', genus: 'Drakes', rank: 'quarry', stratum: 'stormspire',
+    primaryAttunement: 'storm', secondaryAttunement: 'iron', initialPosture: 'charging', bindKind: 'corner', bindPosture: 'cornered',
+    behaviorArchetype: 'rusher', initialCaptureState: 'unreadable', maxHealth: 4,
+    blurb: 'Storm crackles at the surface; an iron core anchors beneath. Read both courts to bind it.',
+    expand: { dire: true } },
+
+  { id: 'cinder-veilkeeper', name: 'Cinder Veilkeeper', genus: 'Stalkers', rank: 'quarry', stratum: 'veilmarsh',
+    primaryAttunement: 'ash', secondaryAttunement: 'veil', initialPosture: 'skittish', bindKind: 'corner', bindPosture: 'cornered',
+    behaviorArchetype: 'lurker', initialCaptureState: 'unreadable', maxHealth: 3,
+    blurb: 'Embers under a shroud — read the Heat and the Absence both before it bolts.',
+    expand: { evolve: [2] } },
+
+  { id: 'ironcrown-herald', name: 'Ironcrown Herald', genus: 'Cantors', rank: 'quarry', stratum: 'ironhold',
+    primaryAttunement: 'iron', secondaryAttunement: 'storm', initialPosture: 'hidden', bindKind: 'reveal', bindPosture: 'revealed',
+    behaviorArchetype: 'support', initialCaptureState: 'unreadable', maxHealth: 4,
+    blurb: 'It crowns itself in static; reveal the Mass beneath the Sky to still it.',
+    expand: { dire: true } },
 ];

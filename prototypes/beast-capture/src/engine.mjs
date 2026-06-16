@@ -1,5 +1,6 @@
 import { createTargetState, seedEncounterKnowledge, speciesComplete } from './state.mjs';
 import { TARGET_BEASTS, COMPANION_ACTION_KIND, TOOL_ACTION_KIND, CAPTURED_ALLY } from './content.mjs';
+import { COURT_OF, COURT_LABEL, toCourt, reactionStrength } from './courts.mjs';
 
 // Consequence tuning (F4/F7/F11). Kept as named constants for easy balancing.
 const ESCAPE_READS = 3; // wrong-attunement probes before the beast flees
@@ -237,17 +238,24 @@ function isConcealedNow(target) {
   return Boolean(def.concealed) && target.posture !== def.bindPosture;
 }
 
-// Returns { matched, altMatched, reacts }. `matched` means a true positive read
-// on the primary route; `altMatched` means a valid read on the alt route;
-// `reacts` controls the "reacts"/"rejects" log wording.
-function evaluateProbe(target, attunement) {
+// Returns { matchedPrimary, matchedSecondary, altMatched, reacts, strength }. A court-probe matches
+// whichever of the beast's attunements lies in that court. `strength` is 'strong' for a court lead,
+// 'faint' for its twin (the confusion-pair signal). A concealed beast reads as its twin (faint) only.
+function evaluateProbe(target, court) {
   const def = beastDef(target);
   if (isConcealedNow(target)) {
-    return { matched: false, altMatched: false, reacts: attunement === def.falseLead };
+    const reacts = court === COURT_OF[def.falseLead];
+    return { matchedPrimary: false, matchedSecondary: false, altMatched: false, reacts, strength: reacts ? 'faint' : null };
   }
-  const matched = attunement === target.primaryAttunement;
-  const altMatched = Boolean(target.altBind) && attunement === target.altBind.attunement;
-  return { matched, altMatched, reacts: matched || altMatched };
+  const matchedPrimary = court != null && court === COURT_OF[target.primaryAttunement];
+  const matchedSecondary =
+    target.secondaryAttunement != null && court != null && court === COURT_OF[target.secondaryAttunement];
+  const altMatched = Boolean(target.altBind) && court != null && court === COURT_OF[target.altBind.attunement];
+  let strength = null;
+  if (matchedPrimary) strength = reactionStrength(target.primaryAttunement);
+  else if (matchedSecondary) strength = reactionStrength(target.secondaryAttunement);
+  else if (altMatched) strength = reactionStrength(target.altBind.attunement);
+  return { matchedPrimary, matchedSecondary, altMatched, reacts: matchedPrimary || matchedSecondary || altMatched, strength };
 }
 
 // Which bind route an action of `kind` serves on this target, honoring the
@@ -274,13 +282,16 @@ function deriveCaptureState(target, flags) {
     return target.captureState;
   }
   const def = beastDef(target);
-  const boldReady = flags.attunementMatch && target.posture === def.bindPosture;
+  const dualSatisfied = target.secondaryAttunement == null || flags.secondaryAttunementMatch;
+  const boldReady = flags.attunementMatch && dualSatisfied && target.posture === def.bindPosture;
+  // The patient (altBind) route is independent of the dual-typing gate. No spawnable beast is both
+  // dual-typed AND altBind, so this can't currently bypass a compound read; revisit if one is authored.
   const patientReady =
     Boolean(target.altBind) && flags.altAttunementMatch && target.posture === target.altBind.bindPosture;
   if (boldReady || patientReady) {
     return 'bindable';
   }
-  const anyAttunement = flags.attunementMatch || flags.altAttunementMatch;
+  const anyAttunement = flags.attunementMatch || flags.secondaryAttunementMatch || flags.altAttunementMatch;
   const anyPosture =
     target.posture === def.bindPosture || (target.altBind && target.posture === target.altBind.bindPosture);
   if (anyAttunement || anyPosture) {
@@ -397,38 +408,40 @@ function finalizeEncounterAction(state, line) {
   return resolveEncounterPressure(withTurn);
 }
 
-export function applyHeroProbe(state, attunement) {
+export function applyHeroProbe(state, probe) {
   if (isResolvedEncounter(state)) {
     return state;
   }
 
   const enc = state.currentEncounter;
   const target = enc.target;
-  const { matched, altMatched, reacts } = evaluateProbe(target, attunement);
-  const read = matched || altMatched;
+  const court = toCourt(probe);
+  const { matchedPrimary, matchedSecondary, altMatched, reacts, strength } = evaluateProbe(target, court);
+  const read = matchedPrimary || matchedSecondary || altMatched;
 
   const flags = {
     ...enc.flags,
-    attunementMatch: enc.flags.attunementMatch || matched,
+    attunementMatch: enc.flags.attunementMatch || matchedPrimary,
+    secondaryAttunementMatch: enc.flags.secondaryAttunementMatch || matchedSecondary,
     altAttunementMatch: enc.flags.altAttunementMatch || altMatched,
   };
   const passives = activePassives(state);
   const escapeTolerance = ESCAPE_READS + ('skittish-kin' in passives ? 1 + passives['skittish-kin'] : 0);
   const escapeProgress = read ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
-  // A deeply-bonded Iron Hold ally (G2) also pins the quarry so it cannot flee.
   const ironGrip = passives['iron-hold'] !== undefined && passives['iron-hold'] >= 3;
   const escaped = !read && escapeProgress >= escapeTolerance && !enc.flags.snared && !ironGrip;
 
   const updatedTarget = { ...target };
   updatedTarget.captureState = escaped ? 'escaped' : deriveCaptureState(updatedTarget, flags);
 
+  const courtLabel = COURT_LABEL[court] ?? probe;
   const probeLine = reacts
-    ? `${target.name} reacts to ${attunement}.`
-    : `${target.name} rejects the ${attunement} probe.`;
+    ? `${target.name} ${strength === 'strong' ? 'reacts sharply' : 'stirs faintly'} to ${courtLabel}.`
+    : `${target.name} rejects the ${courtLabel} probe.`;
 
   const baseState = {
     ...state,
-    codexHints: read ? addHint(state.codexHints, target.id, attunement) : state.codexHints,
+    codexHints: read ? addHint(state.codexHints, target.id, courtLabel) : state.codexHints,
     currentEncounter: { ...enc, target: updatedTarget, flags, escapeProgress },
   };
 
@@ -802,6 +815,7 @@ export function advanceEncounter(state) {
       structures: [],
       flags: {
         attunementMatch: false,
+        secondaryAttunementMatch: false,
         altAttunementMatch: false,
         guardRaised: false,
         braceRaised: false,

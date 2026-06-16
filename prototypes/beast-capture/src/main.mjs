@@ -93,17 +93,17 @@ document.addEventListener('click', (event) => {
     case 'guard':
       state = applyGuardAction(state);
       break;
-    case 'probe-ash':
-      state = applyHeroProbe(state, 'ash');
+    case 'probe-heat':
+      state = applyHeroProbe(state, 'heat');
       break;
-    case 'probe-iron':
-      state = applyHeroProbe(state, 'iron');
+    case 'probe-mass':
+      state = applyHeroProbe(state, 'mass');
       break;
-    case 'probe-storm':
-      state = applyHeroProbe(state, 'storm');
+    case 'probe-sky':
+      state = applyHeroProbe(state, 'sky');
       break;
-    case 'probe-veil':
-      state = applyHeroProbe(state, 'veil');
+    case 'probe-absence':
+      state = applyHeroProbe(state, 'absence');
       break;
     case 'tool-snare-line':
       state = applyToolAction(state, 'snare-line');

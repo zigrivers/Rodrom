@@ -1,4 +1,4 @@
-import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY, OMENS } from './content.mjs';
+import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY, OMENS, CAPTURABLE_POOL } from './content.mjs';
 
 // Elite "Dire" quarries appear at deep layers (G3c): every 4th layer surfaces a
 // tougher, richer variant, so descending introduces interest, not just bigger numbers.
@@ -21,13 +21,14 @@ export function createTargetState(targetId, depth = 1) {
     posture: target.initialPosture,
     captureState: target.initialCaptureState,
     altBind: elite && !target.concealed ? target.altBind ?? null : null,
+    secondaryAttunement: target.secondaryAttunement ?? null,
   };
 }
 
 // The tutorial beast leads only on the very first run; later runs rotate the
 // full pool so the opener (and order) varies, and the deception beast can open
 // a run once the player knows the basics (cme.6, was F12/P6).
-const FULL_POOL = ['ashwing-moth', 'chain-maw', 'veil-lynx', 'storm-antler'];
+const FULL_POOL = CAPTURABLE_POOL;
 
 export function buildEncounterOrder(variant = 0, firstRun = false) {
   if (firstRun) {
@@ -255,6 +256,7 @@ export function createInitialState(options = {}) {
       structures: [],
       flags: {
         attunementMatch: false,
+        secondaryAttunementMatch: false,
         altAttunementMatch: false,
         guardRaised: false,
         braceRaised: false,

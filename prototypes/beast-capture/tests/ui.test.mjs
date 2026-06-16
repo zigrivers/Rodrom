@@ -17,14 +17,14 @@ import { renderApp } from '../src/ui.mjs';
 test('renderApp exposes the browser-visible probes, tools, and beast actions for the default run', () => {
   const html = renderApp(createInitialState());
 
-  assert.match(html, /Probe Ash/);
-  assert.match(html, /Probe Iron/);
-  assert.match(html, /Probe Storm/);
+  assert.match(html, /Probe Heat/);
+  assert.match(html, /Probe Mass/);
+  assert.match(html, /Probe Sky/);
   assert.match(html, /Snare Line/);
   assert.match(html, /Bait Stake/);
   assert.match(html, /Grave Hound: Harry/);
   assert.match(html, /Mireback: Brace/);
-  assert.match(html, /Probe Veil/);
+  assert.match(html, /Probe Absence/);
   assert.doesNotMatch(html, /Salt Marker/);
 });
 
@@ -132,7 +132,7 @@ test('the result screen shows the persistent roster including prior captures', (
 
 test('the encounter view coaches the player toward the capture path', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth'] });
-  assert.match(renderApp(s), /Learn what Ashwing Moth responds to/i);
+  assert.match(renderApp(s), /probe Heat/i);
 
   s = applyHeroProbe(s, 'ash');
   assert.match(renderApp(s), /make it cornered/i);
@@ -141,11 +141,12 @@ test('the encounter view coaches the player toward the capture path', () => {
   assert.match(renderApp(s), /Bind now before it closes/i);
 });
 
-test('after scent-read reveals the attunement, the coach says to probe it', () => {
+test('after scent-read reveals the attunement, the coach says to probe its court', () => {
   let s = createInitialState({ encounterIds: ['ashwing-moth'] });
   s = applyCompanionAction(s, 'grave-hound', 'scent-read');
 
-  assert.match(renderApp(s), /probe Ash to lock it in/i);
+  assert.match(renderApp(s), /probe Heat/i);
+  assert.doesNotMatch(renderApp(s), /probe Ash/i);
 });
 
 test('a concealed beast is coached to reveal it with Scent Read', () => {
@@ -193,7 +194,7 @@ test('renderApp shows turn, tool counts, structures, learned clues, and advance 
   assert.match(html, /Placed Structures/);
   assert.match(html, /Bait Stake/);
   assert.match(html, /Learned Clues/);
-  assert.match(html, /Iron/);
+  assert.match(html, /Mass/);
 });
 
 test('renderApp hides normal encounter actions once an encounter is resolved', () => {
@@ -208,7 +209,7 @@ test('renderApp hides normal encounter actions once an encounter is resolved', (
   assert.match(html, /data-action="advance"(?![^>]*disabled)/);
   assert.match(html, /data-action="strike"[^>]*disabled/);
   assert.match(html, /data-action="guard"[^>]*disabled/);
-  assert.match(html, /data-action="probe-ash"[^>]*disabled/);
+  assert.match(html, /data-action="probe-heat"[^>]*disabled/);
   assert.match(html, /data-action="tool-snare-line"[^>]*disabled/);
   assert.match(html, /data-action="hound-harry"[^>]*disabled/);
   assert.match(html, /data-action="capture"[^>]*disabled/);
@@ -223,7 +224,7 @@ test('learned clues from earlier encounters stay visible during play', () => {
 
   const html = renderApp(s);
   assert.match(html, /Codex/);
-  assert.match(html, /Ashwing Moth: Ash/i);
+  assert.match(html, /Ashwing Moth: Heat/i); // probe now records court label
 });
 
 test('the expedition view shows how much of the haul is still at risk (G1)', () => {
@@ -287,7 +288,7 @@ test('the encounter action bar is grouped, not a flat wall of buttons (cme.9)', 
   assert.match(html, /Reads/);
   assert.match(html, /Resolve/);
   // all the underlying actions are still present, just organized
-  assert.match(html, /data-action="probe-iron"/);
+  assert.match(html, /data-action="probe-mass"/);
   assert.match(html, /data-action="capture"/);
 });
 
@@ -308,7 +309,7 @@ test('the encounter view conveys state through cues, not literal meters', () => 
 
 test('the encounter view warns when bad reads are spooking the quarry', () => {
   let s = createInitialState({ encounterIds: ['chain-maw'] });
-  s = applyHeroProbe(s, 'stone'); // wrong read raises escape risk
+  s = applyHeroProbe(s, 'veil'); // Absence court — foreign to chain-maw (Mass); wrong read raises escape risk
 
   assert.match(renderApp(s), /spooking it/i);
 });
@@ -324,14 +325,14 @@ test('renderApp does not present one-step defense effects as persistent status f
 
 test('renderApp only shows confirmed probes as learned clues', () => {
   let state = createInitialState({ encounterIds: ['chain-maw'] });
-  state = applyHeroProbe(state, 'stone');
-  state = applyHeroProbe(state, 'iron');
+  state = applyHeroProbe(state, 'storm'); // Sky court — foreign to chain-maw (Mass); no hint stored
+  state = applyHeroProbe(state, 'iron');  // Mass court — matches chain-maw; hint stored as "Mass"
 
   const html = renderApp(state);
 
   assert.match(html, /Learned Clues/);
-  assert.match(html, /Iron/);
-  assert.doesNotMatch(html, /Stone/);
+  assert.match(html, /<li>Mass<\/li>/);
+  assert.doesNotMatch(html, /<li>Sky<\/li>/);
 });
 
 test('renderApp shows a learned clue summary on the expedition result screen', () => {
@@ -435,4 +436,14 @@ test('the Master Tamer badge shows only when the bestiary is complete', () => {
   const complete = { 'ashwing-moth': all, 'chain-maw': all, 'veil-lynx': all, 'storm-antler': all };
   assert.match(renderApp(createInitialState({ started: false, bestiary: complete })), /Master Tamer/i);
   assert.doesNotMatch(renderApp(createInitialState({ started: false })), /Master Tamer/i);
+});
+
+test('the encounter screen shows the four court probes', () => {
+  let s = createInitialState({ encounterIds: ['ashwing-moth'] });
+  const html = renderApp(s);
+  assert.match(html, /data-action="probe-heat"/);
+  assert.match(html, /data-action="probe-mass"/);
+  assert.match(html, /data-action="probe-sky"/);
+  assert.match(html, /data-action="probe-absence"/);
+  assert.doesNotMatch(html, /data-action="probe-ash"/);
 });
