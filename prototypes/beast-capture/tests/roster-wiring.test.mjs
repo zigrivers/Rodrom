@@ -24,3 +24,14 @@ test('CAPTURABLE_POOL is core-court base species only (no deep attunement, no va
     'base species only, no generated variants',
   );
 });
+
+test('dual-typed authored beasts are spawnable and span two courts', () => {
+  const duals = ['stormcoil-apostate', 'cinder-veilkeeper', 'ironcrown-herald'];
+  for (const id of duals) {
+    const b = TARGET_BEASTS[id];
+    assert.ok(b, `${id} present`);
+    assert.ok(b.secondaryAttunement, `${id} is dual-typed`);
+    assert.notEqual(COURT_OF[b.primaryAttunement], COURT_OF[b.secondaryAttunement], `${id} spans two courts`);
+    assert.ok(CAPTURABLE_POOL.includes(id), `${id} is spawnable`);
+  }
+});
