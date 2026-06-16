@@ -63,6 +63,13 @@ export function speciesComplete(bestiary, id) {
   return Boolean(t && t.bronze && t.silver && t.gold);
 }
 
+// Bond level used by passives/perks: the raw bond plus the collection-goal +1 when the species'
+// bestiary is complete. Single source of truth so engine.activePassives and seedEncounterKnowledge
+// (veilsight) can't drift apart on how the perk is applied.
+export function effectiveBond(state, id) {
+  return (state.bonds?.[id] ?? 0) + (speciesComplete(state.bestiary, id) ? 1 : 0);
+}
+
 export function bestiaryComplete(bestiary) {
   return BESTIARY_SPECIES.every((id) => speciesComplete(bestiary, id));
 }
@@ -166,7 +173,7 @@ export function seedEncounterKnowledge(state) {
   if (!veilAlly) {
     return state;
   }
-  const bond = state.bonds?.[veilAlly] ?? 0;
+  const bond = effectiveBond(state, veilAlly);
 
   let codexHints = revealAttunement(state.codexHints, state.currentEncounter.target.id);
   if (bond >= 3) {

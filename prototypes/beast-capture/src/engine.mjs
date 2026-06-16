@@ -1,4 +1,4 @@
-import { createTargetState, seedEncounterKnowledge, speciesComplete } from './state.mjs';
+import { createTargetState, seedEncounterKnowledge, effectiveBond } from './state.mjs';
 import { TARGET_BEASTS, COMPANION_ACTION_KIND, TOOL_ACTION_KIND, CAPTURED_ALLY } from './content.mjs';
 import { COURT_OF, COURT_LABEL, toCourt, reactionStrength } from './courts.mjs';
 
@@ -179,15 +179,14 @@ function beastDef(target) {
   return TARGET_BEASTS[target.id];
 }
 
-// Active passives from fielded captured allies (cme.2), keyed to bond level.
+// Active passives from fielded captured allies (cme.2), keyed to effective bond level
+// (raw bond + the collection-goal completion perk; see state.effectiveBond).
 function activePassives(state) {
   const map = {};
   for (const id of Object.keys(state.party.beasts)) {
     const passive = CAPTURED_ALLY[id]?.passive;
     if (passive) {
-      // A bestiary-complete species counts as +1 effective bond (collection-goal perk).
-      const perk = speciesComplete(state.bestiary, id) ? 1 : 0;
-      map[passive] = (state.bonds?.[id] ?? 0) + perk;
+      map[passive] = effectiveBond(state, id);
     }
   }
   return map;

@@ -256,6 +256,20 @@ test('Veilsight: a fielded Veil Lynx ally reveals target attunements on arrival'
   assert.ok(!(without.codexHints['chain-maw'] ?? []).includes('iron'));
 });
 
+test('Veilsight: a bestiary-complete Veil Lynx gets the +1 perk toward the deep-bond reveal', () => {
+  const all = { bronze: true, silver: true, gold: true };
+  const opts = {
+    roster: ['veil-lynx'], fielded: ['veil-lynx'],
+    encounterIds: ['chain-maw', 'storm-antler'], // current chain-maw, next storm-antler
+    bonds: { 'veil-lynx': 2 }, // raw bond 2; the +1 completion perk lifts it to the >=3 deep reveal
+  };
+  const complete = createInitialState({ ...opts, bestiary: { 'veil-lynx': all } });
+  assert.ok(complete.codexHints['storm-antler']?.includes('storm'), 'deep-bond reveals the next layer');
+
+  const incomplete = createInitialState({ ...opts, bestiary: {} });
+  assert.ok(!(incomplete.codexHints['storm-antler'] ?? []).includes('storm'), 'raw bond 2 stays below threshold');
+});
+
 test('Grounding Aura: a fielded Storm Antler ally reduces per-turn pressure', () => {
   const withStorm = applyStrikeAction(
     createInitialState({ roster: ['storm-antler'], fielded: ['storm-antler'], encounterIds: ['chain-maw'] })
