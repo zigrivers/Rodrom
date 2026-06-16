@@ -1,4 +1,4 @@
-import { normalizeBeast, PAIR_TWIN, validateBeast } from './schema.js';
+import { normalizeBeast, PAIR_TWIN, validateBeast, BIND_KINDS } from './schema.js';
 
 // Deterministic alternate route for a Dire's second capture path: each bind kind maps to a
 // distinct fallback kind + its posture, so a derived dual-route is stable and test-friendly.
@@ -9,11 +9,20 @@ export const ALT_ROUTE = {
   ground: { bindKind: 'reveal', bindPosture: 'revealed' },
 };
 
+// Fail loudly at import time if a bind kind has no alt route — otherwise deriveAltBind would
+// throw an opaque TypeError on the first beast that uses the unmapped kind.
+for (const k of BIND_KINDS) {
+  if (!ALT_ROUTE[k]) throw new Error(`ALT_ROUTE missing entry for bind kind: ${k}`);
+}
+
 // Derive a second capture route for a beast that has no authored altBind. The alt attunement is
-// the beast's secondary if set, else its confusion-pair twin.
+// the beast's secondary if set, else its confusion-pair twin. Returns null when there is no
+// distinct second read (e.g. a deep-attunement primary with no twin and no secondary) — a route
+// reading the same attunement as the primary is not a genuine second path.
 export function deriveAltBind(base) {
+  const attunement = base.secondaryAttunement ?? PAIR_TWIN[base.primaryAttunement] ?? null;
+  if (attunement == null || attunement === base.primaryAttunement) return null;
   const route = ALT_ROUTE[base.bindKind];
-  const attunement = base.secondaryAttunement ?? PAIR_TWIN[base.primaryAttunement] ?? base.primaryAttunement;
   return { attunement, bindKind: route.bindKind, bindPosture: route.bindPosture };
 }
 
@@ -36,7 +45,9 @@ export function direVariant(base) {
 const STAGE_EPITHET = { 2: 'Risen', 3: 'Elder' };
 
 // Evolution / depth-form: tougher, harder to read. Stage 3 gains concealment.
+// Stage 1 is the base itself; evolving to stage 1 would mint a near-duplicate ghost entry.
 export function evolveVariant(base, stage) {
+  if (stage < 2) throw new Error(`evolveVariant requires stage >= 2, got ${stage}`);
   const epithet = STAGE_EPITHET[stage];
   return normalizeBeast({
     ...base,
@@ -87,6 +98,8 @@ export function expandRoster(authored) {
 }
 
 // Regional re-skin: same archetype, a different stratum's attunement (false lead re-pairs).
+// Swapping the primary makes the base's secondaryAttunement and altBind stale (they were paired
+// to the old attunement), so both are cleared — a Dire of this re-skin re-derives its own route.
 export function regionalVariant(base, stratum, newAttunement) {
   return normalizeBeast({
     ...base,
@@ -95,6 +108,8 @@ export function regionalVariant(base, stratum, newAttunement) {
     stratum,
     primaryAttunement: newAttunement,
     falseLead: PAIR_TWIN[newAttunement] ?? null,
+    secondaryAttunement: null,
+    altBind: null,
     baseSpeciesId: base.baseSpeciesId ?? base.id, // root id survives variant chaining
     authored: false,
   });

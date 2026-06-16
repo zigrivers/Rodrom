@@ -44,21 +44,44 @@ export const AUTHORED = [
     blurb: 'Six orbiting Sporelings each add a false feint; bind the anchor to collapse them.',
     expand: { dire: true } },
 
+  // Dual-typed quarries pair ONE lead court (sharp) with ONE twin court (faint) — see my-mordor-4ei —
+  // so the strong-vs-faint reaction tells the player which court is the surface and which the core.
   { id: 'stormcoil-apostate', name: 'Stormcoil Apostate', genus: 'Drakes', rank: 'quarry', stratum: 'stormspire',
-    primaryAttunement: 'storm', secondaryAttunement: 'iron', initialPosture: 'charging', bindKind: 'corner', bindPosture: 'cornered',
+    primaryAttunement: 'storm', secondaryAttunement: 'stone', initialPosture: 'charging', bindKind: 'corner', bindPosture: 'cornered',
     behaviorArchetype: 'rusher', initialCaptureState: 'unreadable', maxHealth: 4,
-    blurb: 'Storm crackles at the surface; an iron core anchors beneath. Read both courts to bind it.',
+    blurb: 'Storm crackles sharp at the surface; a heavy stone core stirs faintly beneath. Read both courts to bind it.',
     expand: { dire: true } },
 
   { id: 'cinder-veilkeeper', name: 'Cinder Veilkeeper', genus: 'Stalkers', rank: 'quarry', stratum: 'veilmarsh',
-    primaryAttunement: 'ash', secondaryAttunement: 'veil', initialPosture: 'skittish', bindKind: 'corner', bindPosture: 'cornered',
+    primaryAttunement: 'ash', secondaryAttunement: 'silence', initialPosture: 'skittish', bindKind: 'corner', bindPosture: 'cornered',
     behaviorArchetype: 'lurker', initialCaptureState: 'unreadable', maxHealth: 3,
-    blurb: 'Embers under a shroud — read the Heat and the Absence both before it bolts.',
+    blurb: 'Embers crackle over a held hush — read the Heat sharp and the Absence faint before it bolts.',
     expand: { evolve: [2] } },
 
   { id: 'ironcrown-herald', name: 'Ironcrown Herald', genus: 'Cantors', rank: 'quarry', stratum: 'ironhold',
-    primaryAttunement: 'iron', secondaryAttunement: 'storm', initialPosture: 'hidden', bindKind: 'reveal', bindPosture: 'revealed',
+    primaryAttunement: 'iron', secondaryAttunement: 'light', initialPosture: 'hidden', bindKind: 'reveal', bindPosture: 'revealed',
     behaviorArchetype: 'support', initialCaptureState: 'unreadable', maxHealth: 4,
-    blurb: 'It crowns itself in static; reveal the Mass beneath the Sky to still it.',
+    blurb: 'It crowns itself in pale light; the Mass beneath answers sharp, the Sky-glow only faintly. Still both.',
     expand: { dire: true } },
+
+  // Twin-attuned quarries (my-mordor-4ei): single-court primaries on the twin attunements
+  // (flame/stone/silence; light already arrives via Aerie Cantor) so 'stirs faintly' is a common,
+  // learnable read across all four courts, not a rarity seen only on concealed beasts.
+  { id: 'pyre-wisp', name: 'Pyre Wisp', genus: 'Wraiths', rank: 'quarry', stratum: 'ashfields',
+    primaryAttunement: 'flame', initialPosture: 'skittish', bindKind: 'corner', bindPosture: 'cornered',
+    behaviorArchetype: 'fleer', initialCaptureState: 'unreadable', maxHealth: 2,
+    blurb: 'Live fire with no body — it gutters out the instant you fix on it.',
+    expand: { dire: true } },
+
+  { id: 'scree-golem', name: 'Scree Golem', genus: 'Constructs', rank: 'quarry', stratum: 'ironhold',
+    primaryAttunement: 'stone', initialPosture: 'braced', bindKind: 'stagger', bindPosture: 'staggered',
+    behaviorArchetype: 'tank', initialCaptureState: 'unreadable', maxHealth: 6,
+    blurb: 'A drift of loose stone that walks; stagger it before it settles back to rubble.',
+    expand: { dire: true } },
+
+  { id: 'hush-stalker', name: 'Hush Stalker', genus: 'Stalkers', rank: 'quarry', stratum: 'veilmarsh',
+    primaryAttunement: 'silence', initialPosture: 'hidden', bindKind: 'reveal', bindPosture: 'revealed',
+    behaviorArchetype: 'lurker', initialCaptureState: 'unreadable', maxHealth: 3,
+    blurb: 'It eats sound; you feel the hush before you ever see the shape inside it.',
+    expand: { evolve: [2] } },
 ];

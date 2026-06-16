@@ -84,5 +84,14 @@ export function validateBeast(b) {
   if (b.bindKind && !BIND_KINDS.includes(b.bindKind)) errs.push(`bad bindKind: ${b.bindKind}`);
   if (b.stratum && !STRATA.includes(b.stratum)) errs.push(`bad stratum: ${b.stratum}`);
   if (typeof b.maxHealth === 'number' && (b.maxHealth < 1 || b.maxHealth > 30)) errs.push(`maxHealth out of range: ${b.maxHealth}`);
+  if (b.altBind != null) {
+    if (typeof b.altBind !== 'object') {
+      errs.push('altBind must be an object');
+    } else {
+      if (!ATTUNEMENTS.includes(b.altBind.attunement)) errs.push(`bad altBind.attunement: ${b.altBind.attunement}`);
+      if (!BIND_KINDS.includes(b.altBind.bindKind)) errs.push(`bad altBind.bindKind: ${b.altBind.bindKind}`);
+      if (!POSTURES.includes(b.altBind.bindPosture)) errs.push(`bad altBind.bindPosture: ${b.altBind.bindPosture}`);
+    }
+  }
   return errs;
 }

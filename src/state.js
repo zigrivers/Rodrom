@@ -53,14 +53,23 @@ export function fieldCap(upgrades, bestiary) {
   return FIELD_CAP + (upgrades?.kennel ?? 0) + (bestiaryComplete(bestiary) ? 1 : 0);
 }
 
-// Bestiary completeness (collection goal). A species is complete when all three
-// tiers (Bronze/Silver/Gold) are earned; the Bestiary is complete when all four
-// capturable species are complete.
-const BESTIARY_SPECIES = ['ashwing-moth', 'chain-maw', 'veil-lynx', 'storm-antler'];
+// Bestiary completeness (collection goal). A species is complete when all three tiers
+// (Bronze/Silver/Gold) are earned; the Bestiary is complete when every capturable base species is.
+// Gold (Dire) is reachable for all of them via elite-depth encounters (createTargetState marks the
+// base id elite), including dual-typed beasts, which use the same bronze/silver/gold semantics — so
+// Master Tamer stays achievable.
+export const BESTIARY_SPECIES = CAPTURABLE_POOL;
 
 export function speciesComplete(bestiary, id) {
   const t = (bestiary ?? {})[id];
   return Boolean(t && t.bronze && t.silver && t.gold);
+}
+
+// Bond level used by passives/perks: the raw bond plus the collection-goal +1 when the species'
+// bestiary is complete. Single source of truth so engine.activePassives and seedEncounterKnowledge
+// (veilsight) can't drift apart on how the perk is applied.
+export function effectiveBond(state, id) {
+  return (state.bonds?.[id] ?? 0) + (speciesComplete(state.bestiary, id) ? 1 : 0);
 }
 
 export function bestiaryComplete(bestiary) {
@@ -166,7 +175,7 @@ export function seedEncounterKnowledge(state) {
   if (!veilAlly) {
     return state;
   }
-  const bond = state.bonds?.[veilAlly] ?? 0;
+  const bond = effectiveBond(state, veilAlly);
 
   let codexHints = revealAttunement(state.codexHints, state.currentEncounter.target.id);
   if (bond >= 3) {

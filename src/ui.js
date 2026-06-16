@@ -1,6 +1,6 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.js';
 import { canAdvanceEncounter, tensionLabel } from './engine.js';
-import { upgradeCost, UPGRADES, fieldCap, bestiaryComplete } from './state.js';
+import { upgradeCost, UPGRADES, fieldCap, bestiaryComplete, BESTIARY_SPECIES } from './state.js';
 import { COURT_OF, COURT_LABEL } from './courts.js';
 
 export function renderApp(state) {
@@ -235,7 +235,8 @@ function renderPartyPicker(fielded, roster, bonds = {}, cap = 4) {
 
 function renderBestiary(bestiary) {
   const b = bestiary ?? {};
-  const ids = ['ashwing-moth', 'chain-maw', 'veil-lynx', 'storm-antler'];
+  const ids = BESTIARY_SPECIES;
+  const maxStars = ids.length * 3; // bronze + silver + gold per species
   let earned = 0;
   const rows = ids
     .map((id) => {
@@ -249,7 +250,7 @@ function renderBestiary(bestiary) {
     })
     .join('');
   const badge = bestiaryComplete(b) ? ' — <strong>Master Tamer</strong>' : '';
-  return `<p>Bestiary: ${earned}/12 ★${badge}</p>${rows}`;
+  return `<p>Bestiary: ${earned}/${maxStars} ★${badge}</p>${rows}`;
 }
 
 function renderRoster(roster) {
@@ -339,6 +340,11 @@ function obliqueGuidance(state, target) {
   }
   if (target.altBind) {
     return 'A Dire quarry — it answers two ways. Find them.';
+  }
+  if (target.secondaryAttunement) {
+    // Forward telegraph (my-mordor-4ei): warn that two courts must be read before the bind
+    // locks, so a coach-off player isn't blindsided mid-frenzy by a half-read dual.
+    return 'Two natures stir in this one — a sharp lead over a faint twin. Read both.';
   }
   const learned = state.codexHints[target.id] ?? [];
   if (learned.length) {
