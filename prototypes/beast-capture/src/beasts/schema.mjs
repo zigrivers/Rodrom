@@ -6,6 +6,7 @@ export const DEEP_ATTUNEMENTS = ['rot', 'bone', 'glass', 'tide'];
 export const ATTUNEMENTS = [...CORE_ATTUNEMENTS, ...DEEP_ATTUNEMENTS];
 
 // A beast's default false lead is its attunement's confusion-pair twin.
+// These pairs mirror the confusion-pair courts in src/courts.mjs — keep the two in sync.
 export const PAIR_TWIN = {
   ash: 'flame', flame: 'ash', iron: 'stone', stone: 'iron',
   storm: 'light', light: 'storm', veil: 'silence', silence: 'veil',

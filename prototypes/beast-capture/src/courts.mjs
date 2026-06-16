@@ -1,5 +1,6 @@
 // The 8 attunements form 4 confusion-pair "courts": a lead (the original probeable attunement)
 // and a twin (the original decoy). Probing a court reacts strongly to the lead, faintly to the twin.
+// The lead/twin pairings mirror PAIR_TWIN in src/beasts/schema.mjs — keep the two in sync.
 export const COURTS = ['heat', 'mass', 'sky', 'absence'];
 
 export const COURT_OF = {
@@ -18,8 +19,10 @@ export function toCourt(x) {
   return COURT_OF[x] ?? null;
 }
 
-// Strong if the attunement is its court's lead; faint if it's the twin.
+// Strong if the attunement is its court's lead; faint if it's the twin; null if it's outside the
+// court system (e.g. a deep attunement like rot), so callers can distinguish "twin" from "no court".
 export function reactionStrength(attunement) {
   const court = COURT_OF[attunement];
-  return court && COURT_LEAD[court] === attunement ? 'strong' : 'faint';
+  if (!court) return null;
+  return COURT_LEAD[court] === attunement ? 'strong' : 'faint';
 }
