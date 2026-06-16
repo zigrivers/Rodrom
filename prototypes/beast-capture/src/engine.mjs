@@ -282,7 +282,8 @@ function deriveCaptureState(target, flags) {
     return target.captureState;
   }
   const def = beastDef(target);
-  const boldReady = flags.attunementMatch && target.posture === def.bindPosture;
+  const dualSatisfied = target.secondaryAttunement == null || flags.secondaryAttunementMatch;
+  const boldReady = flags.attunementMatch && dualSatisfied && target.posture === def.bindPosture;
   const patientReady =
     Boolean(target.altBind) && flags.altAttunementMatch && target.posture === target.altBind.bindPosture;
   if (boldReady || patientReady) {
