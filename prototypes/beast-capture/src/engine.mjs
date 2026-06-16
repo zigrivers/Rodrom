@@ -284,6 +284,8 @@ function deriveCaptureState(target, flags) {
   const def = beastDef(target);
   const dualSatisfied = target.secondaryAttunement == null || flags.secondaryAttunementMatch;
   const boldReady = flags.attunementMatch && dualSatisfied && target.posture === def.bindPosture;
+  // The patient (altBind) route is independent of the dual-typing gate. No spawnable beast is both
+  // dual-typed AND altBind, so this can't currently bypass a compound read; revisit if one is authored.
   const patientReady =
     Boolean(target.altBind) && flags.altAttunementMatch && target.posture === target.altBind.bindPosture;
   if (boldReady || patientReady) {
