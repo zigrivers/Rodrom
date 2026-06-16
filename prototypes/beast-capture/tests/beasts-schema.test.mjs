@@ -25,6 +25,15 @@ test('validateBeast rejects bad enums and out-of-range health', () => {
   assert.equal(ATTUNEMENTS.length, 12); // 8 core + 4 deep
 });
 
+test('validateBeast rejects a malformed altBind sub-shape', () => {
+  const good = { ...valid, altBind: { attunement: 'storm', bindKind: 'stagger', bindPosture: 'staggered' } };
+  assert.deepEqual(validateBeast(good), []);
+  assert.ok(validateBeast({ ...valid, altBind: { attunement: 'plasma', bindKind: 'stagger', bindPosture: 'staggered' } }).some((e) => e.includes('altBind.attunement')));
+  assert.ok(validateBeast({ ...valid, altBind: { attunement: 'storm', bindKind: 'lull', bindPosture: 'staggered' } }).some((e) => e.includes('altBind.bindKind')));
+  assert.ok(validateBeast({ ...valid, altBind: { attunement: 'storm', bindKind: 'stagger', bindPosture: 'floating' } }).some((e) => e.includes('altBind.bindPosture')));
+  assert.ok(validateBeast({ ...valid, altBind: 'nope' }).some((e) => e.includes('altBind')));
+});
+
 test('normalizeBeast fills defaults and defaults falseLead to the pair-twin', () => {
   const n = normalizeBeast({
     id: 'm', name: 'M', genus: 'Drakes', primaryAttunement: 'storm',

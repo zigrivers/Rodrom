@@ -24,3 +24,13 @@ test('a dual-typed beast becomes bindable after BOTH court reads + posture', () 
   s = applyToolAction(s, 'bait-stake'); // ground
   assert.equal(s.currentEncounter.target.captureState, 'bindable');
 });
+
+test('an authored lead+twin dual reads sharp on its lead court and faint on its twin court', () => {
+  let s = createInitialState({ encounterIds: ['stormcoil-apostate'] }); // storm (Sky lead) + stone (Mass twin)
+  s = applyHeroProbe(s, 'sky');
+  assert.match(s.log.at(-2), /sharply/);
+  assert.equal(s.currentEncounter.flags.attunementMatch, true);
+  s = applyHeroProbe(s, 'mass');
+  assert.match(s.log.at(-2), /faintly/);
+  assert.equal(s.currentEncounter.flags.secondaryAttunementMatch, true);
+});

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeBeast, validateBeast } from '../src/beasts/schema.mjs';
-import { direVariant, evolveVariant, regionalVariant } from '../src/beasts/generate.mjs';
+import { normalizeBeast, validateBeast, BIND_KINDS } from '../src/beasts/schema.mjs';
+import { direVariant, evolveVariant, regionalVariant, deriveAltBind, ALT_ROUTE } from '../src/beasts/generate.mjs';
 
 const base = normalizeBeast({
   id: 'ash-wanderer', name: 'Ash Wanderer', genus: 'Stalkers', primaryAttunement: 'ash',
@@ -53,4 +53,38 @@ test('regionalVariant re-skins to a new stratum attunement and re-pairs the fals
   assert.equal(r.falseLead, 'silence'); // veil's pair-twin
   assert.equal(r.name, 'Veil-touched Ash Wanderer');
   assert.equal(r.baseSpeciesId, 'ash-wanderer');
+});
+
+test('regionalVariant clears stale secondary and altBind on attunement swap', () => {
+  const dual = normalizeBeast({
+    ...base, secondaryAttunement: 'iron',
+    altBind: { attunement: 'storm', bindKind: 'ground', bindPosture: 'grounded' },
+  });
+  const r = regionalVariant(dual, 'veilmarsh', 'veil');
+  // the old iron secondary / storm altBind are incoherent under a veil primary -> dropped
+  assert.equal(r.secondaryAttunement, null);
+  assert.equal(r.altBind, null);
+  assert.deepEqual(validateBeast(r), []);
+});
+
+test('deriveAltBind returns null when there is no distinct alt attunement (deep primary)', () => {
+  const deep = normalizeBeast({
+    id: 'rot-thing', name: 'Rot Thing', genus: 'Broods', primaryAttunement: 'rot',
+    bindKind: 'ground', bindPosture: 'grounded', initialPosture: 'braced',
+    initialCaptureState: 'unreadable', maxHealth: 4, stratum: 'blightwarren',
+  });
+  // rot has no pair-twin and the beast has no secondary -> no second read to require
+  assert.equal(deriveAltBind(deep), null);
+  // ...so the dire of such a beast has no alt route, not a degenerate same-attunement one
+  assert.equal(direVariant(deep).altBind, null);
+});
+
+test('ALT_ROUTE covers every bind kind (completeness guard)', () => {
+  for (const k of BIND_KINDS) {
+    assert.ok(ALT_ROUTE[k], `ALT_ROUTE missing entry for bind kind: ${k}`);
+  }
+});
+
+test('evolveVariant rejects stage < 2 (no ghost stage-1 duplicate)', () => {
+  assert.throws(() => evolveVariant(base, 1), /stage >= 2/);
 });

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createInitialState, createTargetState } from '../src/state.mjs';
+import { createInitialState, createTargetState, BESTIARY_SPECIES } from '../src/state.mjs';
 import {
   advanceEncounter,
   applyCompanionAction,
@@ -421,6 +421,21 @@ test('single-path beasts keep their normal one-route coaching', () => {
   assert.doesNotMatch(html, /two ways in/i);
 });
 
+test('the coach telegraphs a dual-typed beast up front, before any read', () => {
+  const html = renderApp(createInitialState({ encounterIds: ['stormcoil-apostate'] }));
+  assert.match(html, /answers two ways|read both/i);
+});
+
+test('with the coach off, a dual-typed beast is still telegraphed as answering two ways', () => {
+  const html = renderApp(createInitialState({ coach: false, encounterIds: ['stormcoil-apostate'] }));
+  assert.match(html, /two natures/i);
+  // single-typed beasts keep the plain oblique line
+  assert.doesNotMatch(
+    renderApp(createInitialState({ coach: false, encounterIds: ['chain-maw'] })),
+    /two natures/i,
+  );
+});
+
 test('the town shows the bestiary with star ranks', () => {
   const html = renderApp(createInitialState({
     started: false,
@@ -433,9 +448,17 @@ test('the town shows the bestiary with star ranks', () => {
 
 test('the Master Tamer badge shows only when the bestiary is complete', () => {
   const all = { bronze: true, silver: true, gold: true };
-  const complete = { 'ashwing-moth': all, 'chain-maw': all, 'veil-lynx': all, 'storm-antler': all };
+  const complete = Object.fromEntries(BESTIARY_SPECIES.map((id) => [id, all]));
   assert.match(renderApp(createInitialState({ started: false, bestiary: complete })), /Master Tamer/i);
   assert.doesNotMatch(renderApp(createInitialState({ started: false })), /Master Tamer/i);
+});
+
+test('the bestiary panel scales to the full capturable roster and its star meter', () => {
+  const html = renderApp(createInitialState({ started: false }));
+  assert.match(html, /Pyre Wisp/); // a newly-capturable species now appears in the panel
+  assert.match(html, /Iron Jailer/);
+  const denom = BESTIARY_SPECIES.length * 3; // stars = species × (bronze/silver/gold)
+  assert.match(html, new RegExp(`/\\s*${denom}\\s*★`));
 });
 
 test('the encounter screen shows the four court probes', () => {
