@@ -1334,3 +1334,12 @@ test('a completed species gets +1 effective bond for its passive', () => {
   // complete: effective bond 2 -> relief 2 -> pressure 3 - 2 = 1
   assert.equal(reliefAtDepth5({ 'storm-antler': all }), 1);
 });
+
+test('createInitialState seeds the secondaryAttunementMatch flag false', () => {
+  const s = createInitialState();
+  assert.equal(s.currentEncounter.flags.secondaryAttunementMatch, false);
+});
+
+test('createTargetState carries secondaryAttunement from the beast definition', () => {
+  assert.equal(createTargetState('storm-antler', 1).secondaryAttunement ?? null, null);
+});
