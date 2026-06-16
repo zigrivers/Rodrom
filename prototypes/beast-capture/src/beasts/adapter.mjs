@@ -16,5 +16,6 @@ export function toTargetBeast(b) {
   };
   if (b.altBind) out.altBind = b.altBind;
   if (b.concealed) out.concealed = true;
+  if (b.secondaryAttunement) out.secondaryAttunement = b.secondaryAttunement;
   return out;
 }
