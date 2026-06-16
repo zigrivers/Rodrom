@@ -1,6 +1,6 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
 import { canAdvanceEncounter, tensionLabel } from './engine.mjs';
-import { upgradeCost, UPGRADES, fieldCap, bestiaryComplete } from './state.mjs';
+import { upgradeCost, UPGRADES, fieldCap, bestiaryComplete, BESTIARY_SPECIES } from './state.mjs';
 import { COURT_OF, COURT_LABEL } from './courts.mjs';
 
 export function renderApp(state) {
@@ -235,7 +235,8 @@ function renderPartyPicker(fielded, roster, bonds = {}, cap = 4) {
 
 function renderBestiary(bestiary) {
   const b = bestiary ?? {};
-  const ids = ['ashwing-moth', 'chain-maw', 'veil-lynx', 'storm-antler'];
+  const ids = BESTIARY_SPECIES;
+  const maxStars = ids.length * 3; // bronze + silver + gold per species
   let earned = 0;
   const rows = ids
     .map((id) => {
@@ -249,7 +250,7 @@ function renderBestiary(bestiary) {
     })
     .join('');
   const badge = bestiaryComplete(b) ? ' — <strong>Master Tamer</strong>' : '';
-  return `<p>Bestiary: ${earned}/12 ★${badge}</p>${rows}`;
+  return `<p>Bestiary: ${earned}/${maxStars} ★${badge}</p>${rows}`;
 }
 
 function renderRoster(roster) {

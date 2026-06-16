@@ -10,6 +10,7 @@ import {
   fieldCap,
   speciesComplete,
   bestiaryComplete,
+  BESTIARY_SPECIES,
   FIELD_CAP,
 } from '../src/state.mjs';
 import {
@@ -189,7 +190,7 @@ test('speciesComplete and bestiaryComplete report tier completion', () => {
   assert.equal(speciesComplete({ 'chain-maw': { bronze: true, silver: true, gold: false } }, 'chain-maw'), false);
   assert.equal(speciesComplete({}, 'chain-maw'), false);
 
-  const complete = { 'ashwing-moth': all, 'chain-maw': all, 'veil-lynx': all, 'storm-antler': all };
+  const complete = Object.fromEntries(BESTIARY_SPECIES.map((id) => [id, all]));
   assert.equal(bestiaryComplete(complete), true);
   assert.equal(bestiaryComplete({ 'ashwing-moth': all }), false);
   assert.equal(bestiaryComplete(undefined), false);
@@ -1325,7 +1326,7 @@ test('forfeited captures do not update the bestiary', () => {
 
 test('completing the bestiary raises the field cap (Master Tamer capstone)', () => {
   const all = { bronze: true, silver: true, gold: true };
-  const complete = { 'ashwing-moth': all, 'chain-maw': all, 'veil-lynx': all, 'storm-antler': all };
+  const complete = Object.fromEntries(BESTIARY_SPECIES.map((id) => [id, all]));
   assert.equal(fieldCap({}, {}), 4, 'base cap with no capstone');
   assert.equal(fieldCap({ kennel: 1 }, {}), 5, 'kennel still adds');
   assert.equal(fieldCap({}, complete), 5, 'Master Tamer adds +1');

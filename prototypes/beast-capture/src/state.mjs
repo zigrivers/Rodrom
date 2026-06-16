@@ -56,7 +56,10 @@ export function fieldCap(upgrades, bestiary) {
 // Bestiary completeness (collection goal). A species is complete when all three
 // tiers (Bronze/Silver/Gold) are earned; the Bestiary is complete when all four
 // capturable species are complete.
-const BESTIARY_SPECIES = ['ashwing-moth', 'chain-maw', 'veil-lynx', 'storm-antler'];
+// The collection goal tracks every capturable base species. Gold (Dire) is reachable for all of
+// them via elite-depth encounters (createTargetState marks the base id elite), including dual-typed
+// beasts, which use the same bronze/silver/gold semantics — so Master Tamer stays achievable.
+export const BESTIARY_SPECIES = CAPTURABLE_POOL;
 
 export function speciesComplete(bestiary, id) {
   const t = (bestiary ?? {})[id];

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createInitialState, createTargetState } from '../src/state.mjs';
+import { createInitialState, createTargetState, BESTIARY_SPECIES } from '../src/state.mjs';
 import {
   advanceEncounter,
   applyCompanionAction,
@@ -448,9 +448,17 @@ test('the town shows the bestiary with star ranks', () => {
 
 test('the Master Tamer badge shows only when the bestiary is complete', () => {
   const all = { bronze: true, silver: true, gold: true };
-  const complete = { 'ashwing-moth': all, 'chain-maw': all, 'veil-lynx': all, 'storm-antler': all };
+  const complete = Object.fromEntries(BESTIARY_SPECIES.map((id) => [id, all]));
   assert.match(renderApp(createInitialState({ started: false, bestiary: complete })), /Master Tamer/i);
   assert.doesNotMatch(renderApp(createInitialState({ started: false })), /Master Tamer/i);
+});
+
+test('the bestiary panel scales to the full capturable roster and its star meter', () => {
+  const html = renderApp(createInitialState({ started: false }));
+  assert.match(html, /Pyre Wisp/); // a newly-capturable species now appears in the panel
+  assert.match(html, /Iron Jailer/);
+  const denom = BESTIARY_SPECIES.length * 3; // stars = species × (bronze/silver/gold)
+  assert.match(html, new RegExp(`/\\s*${denom}\\s*★`));
 });
 
 test('the encounter screen shows the four court probes', () => {
