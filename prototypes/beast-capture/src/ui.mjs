@@ -371,8 +371,10 @@ function captureGuidance(state) {
     const courts = [courtLabelFor(target.primaryAttunement)];
     if (target.secondaryAttunement) courts.push(courtLabelFor(target.secondaryAttunement));
     return `Read its ${courts.length > 1 ? 'courts' : 'court'} — probe ${courts.join(' and ')}${
-      target.secondaryAttunement ? ' (it answers two ways — read both)' : ''
-    }. A sharp reaction is the lead; a faint one is its twin.`;
+      target.secondaryAttunement
+        ? ' (it answers two ways — read both). A sharp reaction is the lead; a faint one is its twin.'
+        : '.'
+    }`;
   }
   return `Read in. Now ${triggerHint(def)} to make it ${def.bindPosture}.`;
 }
