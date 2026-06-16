@@ -340,6 +340,11 @@ function obliqueGuidance(state, target) {
   if (target.altBind) {
     return 'A Dire quarry — it answers two ways. Find them.';
   }
+  if (target.secondaryAttunement) {
+    // Forward telegraph (my-mordor-4ei): warn that two courts must be read before the bind
+    // locks, so a coach-off player isn't blindsided mid-frenzy by a half-read dual.
+    return 'Two natures stir in this one — a sharp lead over a faint twin. Read both.';
+  }
   const learned = state.codexHints[target.id] ?? [];
   if (learned.length) {
     return `You've felt which court answers. Drive it from there.`;

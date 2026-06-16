@@ -421,6 +421,21 @@ test('single-path beasts keep their normal one-route coaching', () => {
   assert.doesNotMatch(html, /two ways in/i);
 });
 
+test('the coach telegraphs a dual-typed beast up front, before any read', () => {
+  const html = renderApp(createInitialState({ encounterIds: ['stormcoil-apostate'] }));
+  assert.match(html, /answers two ways|read both/i);
+});
+
+test('with the coach off, a dual-typed beast is still telegraphed as answering two ways', () => {
+  const html = renderApp(createInitialState({ coach: false, encounterIds: ['stormcoil-apostate'] }));
+  assert.match(html, /two natures/i);
+  // single-typed beasts keep the plain oblique line
+  assert.doesNotMatch(
+    renderApp(createInitialState({ coach: false, encounterIds: ['chain-maw'] })),
+    /two natures/i,
+  );
+});
+
 test('the town shows the bestiary with star ranks', () => {
   const html = renderApp(createInitialState({
     started: false,

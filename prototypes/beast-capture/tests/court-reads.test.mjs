@@ -30,3 +30,10 @@ test('a concealed beast stirs faintly to its court until revealed', () => {
   assert.equal(s.currentEncounter.flags.attunementMatch, false);
   assert.match(s.log.at(-2), /faintly/);
 });
+
+test('a twin-attuned beast stirs faintly to its own court but still reads in', () => {
+  let s = createInitialState({ encounterIds: ['pyre-wisp'] }); // flame primary = the Heat twin
+  s = applyHeroProbe(s, 'heat');
+  assert.equal(s.currentEncounter.flags.attunementMatch, true); // a faint read is still a read
+  assert.match(s.log.at(-2), /faintly/);
+});

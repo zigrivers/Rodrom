@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TARGET_BEASTS, CAPTURABLE_POOL } from '../src/content.mjs';
-import { COURT_OF } from '../src/courts.mjs';
+import { COURT_OF, reactionStrength } from '../src/courts.mjs';
 
 test('TARGET_BEASTS is built from the generated roster (includes variants)', () => {
   assert.ok(TARGET_BEASTS['ashwing-moth'], 'shipped beast present');
@@ -33,5 +33,13 @@ test('dual-typed authored beasts are spawnable and span two courts', () => {
     assert.ok(b.secondaryAttunement, `${id} is dual-typed`);
     assert.notEqual(COURT_OF[b.primaryAttunement], COURT_OF[b.secondaryAttunement], `${id} spans two courts`);
     assert.ok(CAPTURABLE_POOL.includes(id), `${id} is spawnable`);
+  }
+});
+
+test('dual-typed beasts pair a lead court with a twin so sharp-vs-faint tells them apart', () => {
+  for (const id of ['stormcoil-apostate', 'cinder-veilkeeper', 'ironcrown-herald']) {
+    const b = TARGET_BEASTS[id];
+    assert.equal(reactionStrength(b.primaryAttunement), 'strong', `${id} primary is a lead (sharp)`);
+    assert.equal(reactionStrength(b.secondaryAttunement), 'faint', `${id} secondary is a twin (faint)`);
   }
 });
