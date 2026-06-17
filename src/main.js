@@ -11,6 +11,7 @@ import {
   withdrawEncounter,
   recoverAtLayer,
   secureHaul,
+  buildStructure,
   advanceEncounter,
   extractExpedition,
 } from './engine.js';
@@ -167,7 +168,9 @@ document.addEventListener('click', (event) => {
       state = { ...state, coach: !(state.coach ?? true) };
       break;
     default:
-      if (button.dataset.action.startsWith('buy-')) {
+      if (button.dataset.action.startsWith('build-')) {
+        state = buildStructure(state, button.dataset.action.slice('build-'.length));
+      } else if (button.dataset.action.startsWith('buy-')) {
         state = buyUpgrade(state, button.dataset.action.slice('buy-'.length));
       } else if (button.dataset.action.startsWith('companion:')) {
         const [, beastId, actionId] = button.dataset.action.split(':');
