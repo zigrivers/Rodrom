@@ -227,6 +227,36 @@ export function canAdvanceEncounter(state) {
   return isTerminalCaptureState(state.currentEncounter.target.captureState);
 }
 
+// The current layer's circuit is complete once its last quarry is resolved — i.e. no quarry remains
+// after the active node in this layer. The anchor/regroup opportunity gates on this (t9i.4). For a
+// single-node layer this is just "the encounter resolved", preserving pre-circuit anchor timing.
+export function circuitComplete(state) {
+  if (!canAdvanceEncounter(state)) return false;
+  const layer = state.run.layers[state.layerIndex];
+  return !layer.slice(state.nodeIndex + 1).some((n) => n.kind === 'quarry');
+}
+
+// Walk the run cursor forward to the next quarry, wrapping layers for the endless descent and
+// collecting any salvage caches crossed on the way down (t9i.2). Returns the new cursor + the lore.
+function advanceToNextQuarry(run, layerIndex, nodeIndex) {
+  const { layers } = run;
+  const totalNodes = layers.reduce((sum, l) => sum + l.length, 0);
+  let li = layerIndex;
+  let ni = nodeIndex;
+  let salvageLore = 0;
+  for (let step = 0; step < totalNodes; step += 1) {
+    ni += 1;
+    if (ni >= layers[li].length) {
+      li = (li + 1) % layers.length;
+      ni = 0;
+    }
+    const node = layers[li][ni];
+    if (node.kind === 'salvage') salvageLore += node.lore ?? 0;
+    else if (node.kind === 'quarry') return { layerIndex: li, nodeIndex: ni, salvageLore };
+  }
+  return { layerIndex: li, nodeIndex: ni, salvageLore };
+}
+
 function isResolvedEncounter(state) {
   return canAdvanceEncounter(state);
 }
@@ -711,7 +741,7 @@ export function anchorHeal(depth) {
 // Anchor — Secure (greed): lock in the haul without healing. Consumes the
 // layer's single anchor. Dying still forfeits captures made after this.
 export function secureHaul(state) {
-  if (state.expeditionComplete || !canAdvanceEncounter(state) || state.currentEncounter.anchored) {
+  if (state.expeditionComplete || !circuitComplete(state) || state.currentEncounter.anchored) {
     return state;
   }
   const secured = state.party.captures.length;
@@ -731,7 +761,7 @@ export function secureHaul(state) {
 // Anchor — Recover (greed): heal the leader and shed beast fatigue WITHOUT
 // securing the haul. Consumes the layer's single anchor; recovery thins with depth.
 export function recoverAtLayer(state) {
-  if (state.expeditionComplete || !canAdvanceEncounter(state) || state.currentEncounter.anchored) {
+  if (state.expeditionComplete || !circuitComplete(state) || state.currentEncounter.anchored) {
     return state;
   }
   const heal = anchorHeal(state.currentEncounter.depth);
@@ -795,12 +825,16 @@ export function advanceEncounter(state) {
     );
   }
 
+  const cursor = advanceToNextQuarry(state.run, state.layerIndex, state.nodeIndex);
   const depth = nextIndex + 1;
-  const beastId = state.encounterIds[nextIndex % state.encounterIds.length];
+  const beastId = state.run.layers[cursor.layerIndex][cursor.nodeIndex].beastId;
   const layerPressure = startingPressure(depth) + (state.omen?.startPressure ?? 0); // Restless Deep (cme.6)
   const advanced = seedEncounterKnowledge({
     ...state,
     encounterIndex: nextIndex,
+    layerIndex: cursor.layerIndex,
+    nodeIndex: cursor.nodeIndex,
+    lore: (state.lore ?? 0) + cursor.salvageLore,
     currentEncounter: {
       target: createTargetState(beastId, depth),
       depth,
@@ -828,7 +862,14 @@ export function advanceEncounter(state) {
     },
   });
 
-  let descended = appendLog(advanced, `The expedition descends to layer ${depth}.`);
+  let descended = advanced;
+  if (cursor.salvageLore > 0) {
+    descended = appendLog(
+      descended,
+      `The expedition recovers a salvage cache on the way down (+${cursor.salvageLore} Lore).`
+    );
+  }
+  descended = appendLog(descended, `The expedition descends to layer ${depth}.`);
   if (startingPressure(depth) > 0) {
     descended = appendLog(
       descended,
