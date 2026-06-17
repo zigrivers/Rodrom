@@ -6,14 +6,16 @@ export function isEliteDepth(depth) {
   return (depth ?? 1) >= 4 && (depth ?? 1) % 4 === 0;
 }
 
-export function createTargetState(targetId, depth = 1) {
+export function createTargetState(targetId, depth = 1, { miniboss = false } = {}) {
   const target = TARGET_BEASTS[targetId];
-  const elite = isEliteDepth(depth);
-  const maxHealth = target.maxHealth + (depth - 1) + (elite ? 2 : 0);
+  // A mini-boss (loh.1) is elite-grade regardless of depth, and tougher still (+2 HP over a Dire).
+  const elite = miniboss || isEliteDepth(depth);
+  const maxHealth = target.maxHealth + (depth - 1) + (elite ? 2 : 0) + (miniboss ? 2 : 0);
   return {
     id: target.id,
-    name: elite ? `Dire ${target.name}` : target.name,
+    name: miniboss ? `Alpha ${target.name}` : elite ? `Dire ${target.name}` : target.name,
     elite,
+    miniboss,
     primaryAttunement: target.primaryAttunement,
     falseLead: target.falseLead,
     health: maxHealth,
@@ -57,9 +59,13 @@ export function buildRun(variant = 0, firstRun = false) {
   const order = buildEncounterOrder(variant, false); // rotated full pool
   const layers = [];
   for (let i = 0; i < order.length; i += 2) {
+    const layerIdx = layers.length;
     const layer = [quarryNode(order[i])];
     if (i + 1 < order.length) {
-      layer.push(salvageNode(SALVAGE_LORE), quarryNode(order[i + 1]));
+      const capstone = quarryNode(order[i + 1]);
+      // Every 3rd circuit caps with a mini-boss — a periodic mastery test (loh.1).
+      if (layerIdx % 3 === 2) capstone.miniboss = true;
+      layer.push(salvageNode(SALVAGE_LORE), capstone);
     }
     layers.push(layer);
   }

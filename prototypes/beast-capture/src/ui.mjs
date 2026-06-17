@@ -79,7 +79,7 @@ export function renderApp(state) {
     <div class="layout">
       <section class="panel">
         <h1>Spiral Descent</h1>
-        <h2>${target.name}${target.elite ? ' <span class="elite-badge">ELITE</span>' : ''}</h2>
+        <h2>${target.name}${target.miniboss ? ' <span class="elite-badge">MINI-BOSS</span>' : target.elite ? ' <span class="elite-badge">ELITE</span>' : ''}</h2>
         <p class="guidance">${captureGuidance(state)}</p>
         <div class="stats">
           ${state.omen ? `<p class="omen">Omen: <strong>${state.omen.name}</strong> — ${state.omen.desc}</p>` : ''}
