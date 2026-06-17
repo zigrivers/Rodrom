@@ -39,6 +39,43 @@ export function buildEncounterOrder(variant = 0, firstRun = false) {
   return FULL_POOL.map((_, index) => FULL_POOL[(start + index) % n]);
 }
 
+// --- Run structure: a run is a sequence of LAYERS; a layer is a circuit of content nodes (t9i.2).
+// A node is { kind: 'quarry', beastId } or { kind: 'salvage', lore }. The `kind` field is the seam
+// future content types (hazard / miniboss / survivor) plug into. A circuit opens on a quarry; the
+// anchor/regroup opportunity unlocks only when the layer's last quarry is resolved (t9i.4).
+export const CIRCUIT_SIZE = 3; // quarry + salvage + quarry
+const SALVAGE_LORE = 3;
+
+const quarryNode = (beastId) => ({ kind: 'quarry', beastId });
+const salvageNode = (lore) => ({ kind: 'salvage', lore });
+
+export function buildRun(variant = 0, firstRun = false) {
+  if (firstRun) {
+    // Gentle tutorial: one circuit of the three concealment-free quarries, no salvage.
+    return { layers: [['ashwing-moth', 'chain-maw', 'storm-antler'].map(quarryNode)] };
+  }
+  const order = buildEncounterOrder(variant, false); // rotated full pool
+  const layers = [];
+  for (let i = 0; i < order.length; i += 2) {
+    const layer = [quarryNode(order[i])];
+    if (i + 1 < order.length) {
+      layer.push(salvageNode(SALVAGE_LORE), quarryNode(order[i + 1]));
+    }
+    layers.push(layer);
+  }
+  return { layers };
+}
+
+// A run from an explicit beast list: each beast its own single-node layer (so every encounter is a
+// complete circuit). Preserves the pre-circuit behavior for callers/tests that pass `encounterIds`.
+const runFromEncounterIds = (ids) => ({ layers: ids.map((id) => [quarryNode(id)]) });
+
+// Flat ordered list of the run's quarry beast ids — the substrate seedEncounterKnowledge and the
+// scout's-lantern reveal read (they reason about the sequence of quarries, not the cache nodes).
+export function quarryList(run) {
+  return run.layers.flat().filter((n) => n.kind === 'quarry').map((n) => n.beastId);
+}
+
 // Allied beasts the player can choose to field, with their per-beast health.
 const FIELDABLE = ['grave-hound', 'mireback-tortoise'];
 
@@ -189,7 +226,11 @@ export function seedEncounterKnowledge(state) {
 }
 
 export function createInitialState(options = {}) {
-  const encounterIds = options.encounterIds ?? ['ashwing-moth', 'chain-maw', 'storm-antler'];
+  // The run is a sequence of layer circuits. An explicit `run` wins; otherwise an `encounterIds`
+  // list (or the default tutorial trio) maps to single-node layers, preserving pre-circuit behavior.
+  const run =
+    options.run ?? runFromEncounterIds(options.encounterIds ?? ['ashwing-moth', 'chain-maw', 'storm-antler']);
+  const encounterIds = quarryList(run); // flat quarry sequence (depth / reveal substrate)
   const fielded = options.fielded ?? [...FIELDABLE];
   const upgrades = options.upgrades ?? {};
   const leaderMaxHealth = LEADER_BASE_HP + (upgrades.infirmary ?? 0);
@@ -242,6 +283,10 @@ export function createInitialState(options = {}) {
     omen: omenDef,
     encounterIds,
     encounterIndex: 0,
+    // Run-circuit cursor (t9i.2): which layer, and which node within it, is active.
+    run,
+    layerIndex: 0,
+    nodeIndex: 0,
     log: ['Expedition begins.'],
     codexHints,
     expeditionComplete: false,

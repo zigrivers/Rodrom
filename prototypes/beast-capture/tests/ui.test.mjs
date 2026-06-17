@@ -421,6 +421,25 @@ test('single-path beasts keep their normal one-route coaching', () => {
   assert.doesNotMatch(html, /two ways in/i);
 });
 
+test('the anchor menu gates to circuit completion and a circuit indicator shows progress', () => {
+  const run = { layers: [[{ kind: 'quarry', beastId: 'chain-maw' }, { kind: 'quarry', beastId: 'storm-antler' }]] };
+  let s = createInitialState({ run, fielded: ['mireback-tortoise'] });
+  s = applyHeroProbe(s, 'mass');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s); // node 0 resolved; circuit NOT complete
+  let html = renderApp(s);
+  assert.match(html, /Circuit: quarry 1 of 2/);
+  assert.match(html, /data-action="anchor-secure"[^>]*disabled/);
+
+  s = advanceEncounter(s);
+  s = applyToolAction(s, 'bait-stake');
+  s = applyHeroProbe(s, 'sky');
+  s = attemptCapture(s); // last quarry resolved; circuit complete
+  html = renderApp(s);
+  assert.match(html, /Circuit: quarry 2 of 2 — circuit clear/);
+  assert.match(html, /data-action="anchor-secure"(?![^>]*disabled)/);
+});
+
 test('the coach telegraphs a dual-typed beast up front, before any read', () => {
   const html = renderApp(createInitialState({ encounterIds: ['stormcoil-apostate'] }));
   assert.match(html, /answers two ways|read both/i);

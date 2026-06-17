@@ -1,5 +1,5 @@
 import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
-import { canAdvanceEncounter, tensionLabel } from './engine.mjs';
+import { canAdvanceEncounter, tensionLabel, circuitComplete } from './engine.mjs';
 import { upgradeCost, UPGRADES, fieldCap, bestiaryComplete, BESTIARY_SPECIES } from './state.mjs';
 import { COURT_OF, COURT_LABEL } from './courts.mjs';
 
@@ -63,6 +63,11 @@ export function renderApp(state) {
   const encounterResolved = canAdvanceEncounter(state);
   const captureDisabled = target.captureState !== 'bindable';
   const advanceAllowed = encounterResolved;
+  // The anchor/regroup opportunity unlocks only when the layer's circuit is complete (t9i.4).
+  const layerComplete = circuitComplete(state);
+  const layerNodes = state.run.layers[state.layerIndex];
+  const quarriesInLayer = layerNodes.filter((n) => n.kind === 'quarry').length;
+  const quarryPos = layerNodes.slice(0, state.nodeIndex + 1).filter((n) => n.kind === 'quarry').length;
   const pressLevel = state.currentEncounter.pressLevel ?? 0;
 
   return `
@@ -74,6 +79,7 @@ export function renderApp(state) {
         <div class="stats">
           ${state.omen ? `<p class="omen">Omen: <strong>${state.omen.name}</strong> — ${state.omen.desc}</p>` : ''}
           <p>Layer ${state.currentEncounter.depth} (the deeper you go, the harder it presses)</p>
+          ${quarriesInLayer > 1 ? `<p>Circuit: quarry ${quarryPos} of ${quarriesInLayer}${layerComplete ? ' — circuit clear, regroup or descend' : ''}</p>` : ''}
           <p>Turn: ${state.currentEncounter.turn}</p>
           <p>Target HP: ${target.health}/${target.maxHealth}</p>
           <p>Posture: ${target.posture}</p>
@@ -145,8 +151,8 @@ export function renderApp(state) {
           </div>
           <div class="action-group">
             <h4>Between layers</h4>
-            <button data-action="anchor-recover" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored)}>Anchor: Recover (heal)</button>
-            <button data-action="anchor-secure" ${renderDisabled(!advanceAllowed || state.currentEncounter.anchored || (state.securedCount ?? 0) >= state.party.captures.length)}>Anchor: Secure (bank haul)</button>
+            <button data-action="anchor-recover" ${renderDisabled(!layerComplete || state.currentEncounter.anchored)}>Anchor: Recover (heal)</button>
+            <button data-action="anchor-secure" ${renderDisabled(!layerComplete || state.currentEncounter.anchored || (state.securedCount ?? 0) >= state.party.captures.length)}>Anchor: Secure (bank haul)</button>
             <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Descend deeper</button>
             <button data-action="extract" ${renderDisabled(!advanceAllowed)}>Extract (keep haul)</button>
           </div>

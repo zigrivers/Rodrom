@@ -1,4 +1,4 @@
-import { createInitialState, buildEncounterOrder, buyUpgrade, toggleFielded, fieldCap } from './state.mjs';
+import { createInitialState, buildRun, buyUpgrade, toggleFielded, fieldCap } from './state.mjs';
 import { OMENS } from './content.mjs';
 import {
   applyHeroProbe,
@@ -63,7 +63,7 @@ function startExpedition() {
   const omen = omenKeys[Math.floor(Math.random() * omenKeys.length)];
   return createInitialState({
     started: true,
-    encounterIds: buildEncounterOrder(variant, firstRun),
+    run: buildRun(variant, firstRun),
     omen,
     roster: state.roster,
     bonds: state.bonds,
