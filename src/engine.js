@@ -860,7 +860,8 @@ export function advanceEncounter(state) {
 
   const cursor = advanceToNextQuarry(state.run, state.layerIndex, state.nodeIndex);
   const depth = nextIndex + 1;
-  const beastId = state.run.layers[cursor.layerIndex][cursor.nodeIndex].beastId;
+  const node = state.run.layers[cursor.layerIndex][cursor.nodeIndex];
+  const beastId = node.beastId;
   const descentRelief = state.builds?.includes('descent-support') ? 1 : 0; // Descent Support (z4y.3)
   const layerPressure = Math.max(
     0,
@@ -873,7 +874,7 @@ export function advanceEncounter(state) {
     nodeIndex: cursor.nodeIndex,
     lore: (state.lore ?? 0) + cursor.salvageLore,
     currentEncounter: {
-      target: createTargetState(beastId, depth),
+      target: createTargetState(beastId, depth, { miniboss: node.miniboss === true }),
       depth,
       anchored: false,
       turn: 1,
