@@ -1,5 +1,5 @@
 import { createTargetState, seedEncounterKnowledge, effectiveBond } from './state.mjs';
-import { TARGET_BEASTS, COMPANION_ACTION_KIND, TOOL_ACTION_KIND, CAPTURED_ALLY } from './content.mjs';
+import { TARGET_BEASTS, COMPANION_ACTION_KIND, TOOL_ACTION_KIND, CAPTURED_ALLY, BUILD_CATALOG } from './content.mjs';
 import { COURT_OF, COURT_LABEL, toCourt, reactionStrength } from './courts.mjs';
 
 // Consequence tuning (F4/F7/F11). Kept as named constants for easy balancing.
@@ -455,7 +455,10 @@ export function applyHeroProbe(state, probe) {
     altAttunementMatch: enc.flags.altAttunementMatch || altMatched,
   };
   const passives = activePassives(state);
-  const escapeTolerance = ESCAPE_READS + ('skittish-kin' in passives ? 1 + passives['skittish-kin'] : 0);
+  const escapeTolerance =
+    ESCAPE_READS +
+    ('skittish-kin' in passives ? 1 + passives['skittish-kin'] : 0) +
+    (state.builds?.includes('watch-totem') ? 1 : 0); // Watch Totem (z4y.3)
   const escapeProgress = read ? enc.escapeProgress ?? 0 : (enc.escapeProgress ?? 0) + 1;
   const ironGrip = passives['iron-hold'] !== undefined && passives['iron-hold'] >= 3;
   const escaped = !read && escapeProgress >= escapeTolerance && !enc.flags.snared && !ironGrip;
@@ -764,7 +767,8 @@ export function recoverAtLayer(state) {
   if (state.expeditionComplete || !circuitComplete(state) || state.currentEncounter.anchored) {
     return state;
   }
-  const heal = anchorHeal(state.currentEncounter.depth);
+  const campBonus = state.builds?.includes('sanctified-camp') ? 2 : 0; // Sanctified Camp (z4y.3)
+  const heal = anchorHeal(state.currentEncounter.depth) + campBonus;
   const leader = {
     ...state.party.leader,
     health: Math.min(state.party.leader.maxHealth, state.party.leader.health + heal),
@@ -782,6 +786,22 @@ export function recoverAtLayer(state) {
       currentEncounter: { ...state.currentEncounter, anchored: true },
     },
     `The expedition makes camp at layer ${state.currentEncounter.depth}: it heals and steadies (recovery thins deeper down).`
+  );
+}
+
+// Raise a heavy structure at a circuit-completion anchor (z4y.3): requires the circuit complete,
+// enough Lore, and that the structure isn't already built this run. Its effect lasts the whole run.
+export function buildStructure(state, id) {
+  const def = BUILD_CATALOG[id];
+  if (!def || state.expeditionComplete || !circuitComplete(state)) {
+    return state;
+  }
+  if ((state.builds ?? []).includes(id) || (state.lore ?? 0) < def.cost) {
+    return state;
+  }
+  return appendLog(
+    { ...state, lore: state.lore - def.cost, builds: [...(state.builds ?? []), id] },
+    `The expedition raises a ${def.name} at the anchor (−${def.cost} Lore): ${def.effect}.`
   );
 }
 
@@ -828,7 +848,11 @@ export function advanceEncounter(state) {
   const cursor = advanceToNextQuarry(state.run, state.layerIndex, state.nodeIndex);
   const depth = nextIndex + 1;
   const beastId = state.run.layers[cursor.layerIndex][cursor.nodeIndex].beastId;
-  const layerPressure = startingPressure(depth) + (state.omen?.startPressure ?? 0); // Restless Deep (cme.6)
+  const descentRelief = state.builds?.includes('descent-support') ? 1 : 0; // Descent Support (z4y.3)
+  const layerPressure = Math.max(
+    0,
+    startingPressure(depth) + (state.omen?.startPressure ?? 0) - descentRelief // Restless Deep (cme.6)
+  );
   const advanced = seedEncounterKnowledge({
     ...state,
     encounterIndex: nextIndex,
