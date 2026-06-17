@@ -19,6 +19,7 @@ const FAST_CAPTURE_TURNS = 4;
 const DUPE_CONVERT_LORE = 2;
 // Elite "Dire" quarries (G3c) are worth this much bonus Lore on capture.
 const ELITE_LORE = 4;
+const FAILURE_DEPTH_THRESHOLD = 4; // failures at this depth or deeper also wound your beasts (ua7)
 // Press-your-luck (greed): each press level banked on a capture is worth this
 // much bonus Lore; a catch pressed to level 2+ also deepens that species' bond.
 const PRESS_LORE = 2;
@@ -65,10 +66,22 @@ function completeExpedition(state, rank) {
   const bankedGrades = (state.captureLog ?? []).slice(0, bankedCount);
   const forfeited = totalCaptures - bankedCount;
 
-  // 1. Fielded captured allies deepen their bond by surviving the run.
+  // Failure model (ua7): consequences scale with the depth at which the leader fell. Shallow
+  // failures stay gentle (you only lose the unsecured haul), so early experimentation is safe
+  // (ua7.2). A DEEP failure also wounds the fielded beasts — a persistent bond setback that grows
+  // the further you pushed (ua7.1). (Richer deep consequences — survivors, corruption, town
+  // sabotage — wait on their systems: 6mi / b1l / vbf.)
+  const failDepth = state.currentEncounter?.depth ?? 1;
+  const deepFailure = failed && failDepth >= FAILURE_DEPTH_THRESHOLD;
+  const bondPenalty = deepFailure ? Math.floor(failDepth / FAILURE_DEPTH_THRESHOLD) : 0;
+
+  // 1. Fielded captured allies: surviving the run deepens their bond (+1); a deep failure instead
+  //    returns them wounded, costing bond scaled by depth (floored at 0).
   for (const id of state.fielded) {
     if (CAPTURED_ALLY[id]) {
-      bonds[id] = (bonds[id] ?? 0) + 1;
+      bonds[id] = deepFailure
+        ? Math.max(0, (bonds[id] ?? 0) - bondPenalty)
+        : (bonds[id] ?? 0) + 1;
     }
   }
 
@@ -153,7 +166,7 @@ function completeExpedition(state, rank) {
   return {
     ...state,
     expeditionComplete: true,
-    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, boldLore, bestiaryBounty, forfeited },
+    result: { rank, captures, loreEarned, bonusLore, cleanCaptures, dupesFused, dupeLore, eliteCaptures, pressLore, boldLore, bestiaryBounty, forfeited, failDepth, deepFailure, bondPenalty },
     roster,
     bonds,
     bestiary,

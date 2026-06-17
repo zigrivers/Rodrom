@@ -36,6 +36,11 @@ export function renderApp(state) {
             ? `<p class="at-risk">The leader fell — ${state.result.forfeited} unsecured capture${state.result.forfeited === 1 ? '' : 's'} lost to the deep. Only your anchored haul was saved.</p>`
             : ''
         }
+        ${
+          state.result.deepFailure
+            ? `<p class="at-risk">Falling at layer ${state.result.failDepth} left your fielded beasts wounded — each lost ${state.result.bondPenalty} bond. (Shallow falls spare them.)</p>`
+            : ''
+        }
         <p>Captures this run: ${state.result.captures}</p>
         <p>Lore earned: ${state.result.loreEarned} (town total: ${state.lore})</p>
         ${
