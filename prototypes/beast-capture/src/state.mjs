@@ -230,6 +230,12 @@ export function createInitialState(options = {}) {
   // list (or the default tutorial trio) maps to single-node layers, preserving pre-circuit behavior.
   const run =
     options.run ?? runFromEncounterIds(options.encounterIds ?? ['ashwing-moth', 'chain-maw', 'storm-antler']);
+  // Contract: a run opens its first layer on a quarry (the cursor seeds there) and has ≥1 quarry.
+  // buildRun guarantees this; fail loudly if a future content type or injected run violates it,
+  // rather than silently dropping a leading cache or building a target from an undefined beast.
+  if (run.layers?.[0]?.[0]?.kind !== 'quarry') {
+    throw new Error('a run must open its first layer on a quarry node');
+  }
   const encounterIds = quarryList(run); // flat quarry sequence (depth / reveal substrate)
   const fielded = options.fielded ?? [...FIELDABLE];
   const upgrades = options.upgrades ?? {};
