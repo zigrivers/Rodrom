@@ -1,4 +1,4 @@
-import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY } from './content.mjs';
+import { PLAYER_BEASTS, TARGET_BEASTS, TOOLS, CAPTURED_ALLY, BUILD_CATALOG } from './content.mjs';
 import { canAdvanceEncounter, tensionLabel, circuitComplete } from './engine.mjs';
 import { upgradeCost, UPGRADES, fieldCap, bestiaryComplete, BESTIARY_SPECIES } from './state.mjs';
 import { COURT_OF, COURT_LABEL } from './courts.mjs';
@@ -155,6 +155,18 @@ export function renderApp(state) {
             <button data-action="anchor-secure" ${renderDisabled(!layerComplete || state.currentEncounter.anchored || (state.securedCount ?? 0) >= state.party.captures.length)}>Anchor: Secure (bank haul)</button>
             <button data-action="advance" ${renderDisabled(!advanceAllowed)}>Descend deeper</button>
             <button data-action="extract" ${renderDisabled(!advanceAllowed)}>Extract (keep haul)</button>
+          </div>
+          <div class="action-group">
+            <h4>Build (anchor)</h4>
+            ${Object.values(BUILD_CATALOG)
+              .map((b) => {
+                const built = (state.builds ?? []).includes(b.id);
+                const disabled = !layerComplete || built || (state.lore ?? 0) < b.cost;
+                return `<button data-action="build-${b.id}" ${renderDisabled(disabled)}>${
+                  built ? `${b.name} ✓` : `${b.name} (${b.cost} Lore) — ${b.effect}`
+                }</button>`;
+              })
+              .join('')}
           </div>
         </div>
       </section>

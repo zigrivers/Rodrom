@@ -421,6 +421,27 @@ test('single-path beasts keep their normal one-route coaching', () => {
   assert.doesNotMatch(html, /two ways in/i);
 });
 
+test('heavy-structure build buttons are gated to circuit completion and affordability', () => {
+  const run = { layers: [[{ kind: 'quarry', beastId: 'chain-maw' }, { kind: 'quarry', beastId: 'storm-antler' }]] };
+  let s = createInitialState({ run, fielded: ['mireback-tortoise'], lore: 20 });
+  s = applyHeroProbe(s, 'mass');
+  s = applyCompanionAction(s, 'mireback-tortoise', 'shove');
+  s = attemptCapture(s); // mid-circuit
+  let html = renderApp(s);
+  assert.match(html, /data-action="build-sanctified-camp"[^>]*disabled/);
+
+  s = advanceEncounter(s);
+  s = applyToolAction(s, 'bait-stake');
+  s = applyHeroProbe(s, 'sky');
+  s = attemptCapture(s); // circuit complete, 20 Lore
+  html = renderApp(s);
+  assert.match(html, /data-action="build-sanctified-camp"(?![^>]*disabled)/);
+  // too poor: every build disabled
+  const broke = createInitialState({ run: { layers: [[{ kind: 'quarry', beastId: 'chain-maw' }]] }, fielded: ['mireback-tortoise'], lore: 0 });
+  let b = attemptCapture(applyCompanionAction(applyHeroProbe(broke, 'mass'), 'mireback-tortoise', 'shove'));
+  assert.match(renderApp(b), /data-action="build-descent-support"[^>]*disabled/);
+});
+
 test('the anchor menu gates to circuit completion and a circuit indicator shows progress', () => {
   const run = { layers: [[{ kind: 'quarry', beastId: 'chain-maw' }, { kind: 'quarry', beastId: 'storm-antler' }]] };
   let s = createInitialState({ run, fielded: ['mireback-tortoise'] });

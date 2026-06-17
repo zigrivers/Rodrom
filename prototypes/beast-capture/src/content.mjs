@@ -99,6 +99,24 @@ export const OMENS = {
   },
 };
 
+// Heavy structures (z4y.3): raised at a circuit-completion anchor for a Lore cost, each with a
+// persistent run effect. Unlike light field tools, they require an anchor and last the whole run.
+// One of each per run; the catalog is extensible (the vision lists more, gated on later systems).
+export const BUILD_CATALOG = {
+  'descent-support': {
+    id: 'descent-support', name: 'Descent Support', cost: 6,
+    effect: 'future descents start under less pressure',
+  },
+  'sanctified-camp': {
+    id: 'sanctified-camp', name: 'Sanctified Camp', cost: 10,
+    effect: 'anchor Recover heals more',
+  },
+  'watch-totem': {
+    id: 'watch-totem', name: 'Watch Totem', cost: 8,
+    effect: 'quarries tolerate one more wrong read before fleeing',
+  },
+};
+
 export const TOOLS = {
   'torch-pylon': { id: 'torch-pylon', name: 'Torch Pylon', uses: 1 },
   'salt-marker': { id: 'salt-marker', name: 'Salt Marker', uses: 1 },

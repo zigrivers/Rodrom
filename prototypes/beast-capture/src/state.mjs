@@ -293,6 +293,8 @@ export function createInitialState(options = {}) {
     run,
     layerIndex: 0,
     nodeIndex: 0,
+    // Heavy structures raised at anchors this run (z4y.3); reset each run.
+    builds: options.builds ?? [],
     log: ['Expedition begins.'],
     codexHints,
     expeditionComplete: false,
